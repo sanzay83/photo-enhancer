@@ -118,6 +118,25 @@
     #selectionCanvas.editing { pointer-events: auto; cursor: crosshair; }
     .selection-badge { position: absolute; z-index: 4; left: 50%; bottom: 12px; transform: translateX(-50%); display: none; padding: 6px 10px; border-radius: 7px; background: rgba(15,18,16,.82); color: #fff; font-size: .7rem; font-weight: 700; white-space: nowrap; pointer-events: none; }
     .selection-badge.visible { display: block; }
+    .crop-overlay { position: absolute; z-index: 6; display: none; border: 2px solid #fff; box-shadow: 0 0 0 9999px rgba(5,8,6,.62), 0 0 0 1px rgba(0,0,0,.32); cursor: move; touch-action: none; }
+    .crop-overlay.active { display: block; }
+    .crop-guide { position: absolute; pointer-events: none; background: rgba(255,255,255,.76); box-shadow: 0 0 1px rgba(0,0,0,.5); }
+    .crop-guide.v1, .crop-guide.v2 { top: 0; bottom: 0; width: 1px; }
+    .crop-guide.h1, .crop-guide.h2 { left: 0; right: 0; height: 1px; }
+    .crop-guide.v1, .crop-guide.h1 { left: 33.333%; top: 33.333%; }
+    .crop-guide.v2, .crop-guide.h2 { left: 66.666%; top: 66.666%; }
+    .crop-guide.v1, .crop-guide.v2 { top: 0; }
+    .crop-guide.h1, .crop-guide.h2 { left: 0; }
+    .crop-handle { position: absolute; width: 24px; height: 24px; }
+    .crop-handle::after { content: ""; position: absolute; width: 11px; height: 11px; border-color: #fff; border-style: solid; filter: drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+    .crop-handle.nw { left: -5px; top: -5px; cursor: nwse-resize; }
+    .crop-handle.ne { right: -5px; top: -5px; cursor: nesw-resize; }
+    .crop-handle.sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
+    .crop-handle.se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+    .crop-handle.nw::after { left: 4px; top: 4px; border-width: 3px 0 0 3px; }
+    .crop-handle.ne::after { right: 4px; top: 4px; border-width: 3px 3px 0 0; }
+    .crop-handle.sw::after { left: 4px; bottom: 4px; border-width: 0 0 3px 3px; }
+    .crop-handle.se::after { right: 4px; bottom: 4px; border-width: 0 3px 3px 0; }
     .tag { position: absolute; top: 12px; padding: 5px 9px; border-radius: 6px; color: #fff; background: rgba(15,18,16,.72); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; pointer-events: none; }
     .tag.before { right: 12px; } .tag.after { left: 12px; }
 
@@ -149,6 +168,21 @@
     .mask-editor.active { display: grid; }
     .mask-editor .selection-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); }
     .selection-help { margin: 7px 1px 0; color: var(--muted); font-size: .68rem; line-height: 1.4; }
+    .crop-tools { margin: 0 0 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .crop-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .crop-title strong { font-size: .78rem; }
+    .crop-open { min-height: 34px; border: 1px solid var(--line); border-radius: 8px 3px 8px 8px; padding: 0 11px; background: var(--surface-2); color: var(--ink); cursor: pointer; font-size: .72rem; font-weight: 700; }
+    .crop-open[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); }
+    .crop-panel { display: none; margin-top: 10px; }
+    .crop-panel.active { display: block; }
+    .crop-ratios { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+    .crop-ratio { min-height: 34px; border: 1px solid var(--line); border-radius: 8px 3px 8px 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: .7rem; font-weight: 700; }
+    .crop-ratio[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); }
+    .crop-meta { display: flex; justify-content: space-between; gap: 12px; margin: 8px 1px 0; color: var(--muted); font-size: .67rem; line-height: 1.35; }
+    .crop-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 9px; }
+    .crop-action { min-height: 36px; border: 1px solid var(--line); border-radius: 9px 3px 9px 9px; background: transparent; color: var(--ink); cursor: pointer; font-size: .72rem; font-weight: 700; }
+    .crop-action.primary { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent); color: #fff; }
+    @media (prefers-color-scheme: dark) { .crop-action.primary { color: #0c1d15; } }
     .adjustments { display: grid; gap: 10px; }
     .adjust-panels { display: grid; align-items: end; }
     .adjust { display: none; padding: 12px 13px 10px; background: var(--surface-2); border-radius: 12px 4px 12px 12px; }
@@ -264,6 +298,14 @@
               <input id="compareRange" type="range" min="0" max="100" value="50" aria-label="Move to compare before and after" />
               <canvas id="selectionCanvas" aria-label="Subject selection overlay"></canvas>
               <span class="selection-badge" id="selectionBadge">Subject selection · paint to add</span>
+              <div class="crop-overlay" id="cropOverlay" aria-label="Crop area. Drag to reposition; drag a corner to resize.">
+                <span class="crop-guide v1"></span><span class="crop-guide v2"></span>
+                <span class="crop-guide h1"></span><span class="crop-guide h2"></span>
+                <span class="crop-handle nw" data-crop-handle="nw"></span>
+                <span class="crop-handle ne" data-crop-handle="ne"></span>
+                <span class="crop-handle sw" data-crop-handle="sw"></span>
+                <span class="crop-handle se" data-crop-handle="se"></span>
+              </div>
               <div class="processing" id="processing"><span>Refining preview…</span></div>
             </div>
           </div>
@@ -306,6 +348,27 @@
             <button class="selection-btn" id="finishSelectionBtn" type="button">Done</button>
           </div>
           <p class="selection-help" id="selectionHelp">Auto-select estimates the in-focus front object from local sharpness. You can update the selection by painting or erasing.</p>
+        </div>
+
+        <div class="crop-tools" aria-label="Crop and framing controls">
+          <div class="crop-title">
+            <strong>Crop &amp; frame</strong>
+            <button class="crop-open" id="cropOpenBtn" type="button" aria-expanded="false" disabled>Crop photo</button>
+          </div>
+          <div class="crop-panel" id="cropPanel">
+            <div class="crop-ratios" role="group" aria-label="Crop aspect ratio">
+              <button class="crop-ratio" type="button" data-crop-ratio="original" aria-pressed="true">Original</button>
+              <button class="crop-ratio" type="button" data-crop-ratio="free" aria-pressed="false">Free</button>
+              <button class="crop-ratio" type="button" data-crop-ratio="1:1" aria-pressed="false">1:1</button>
+              <button class="crop-ratio" type="button" data-crop-ratio="4:5" aria-pressed="false">4:5</button>
+              <button class="crop-ratio" type="button" data-crop-ratio="16:9" aria-pressed="false">16:9</button>
+            </div>
+            <div class="crop-meta"><span>Drag the frame or its corners</span><span id="cropSizeLabel">Original</span></div>
+            <div class="crop-actions">
+              <button class="crop-action" id="cropResetBtn" type="button">Reset crop</button>
+              <button class="crop-action primary" id="cropDoneBtn" type="button">Done</button>
+            </div>
+          </div>
         </div>
 
         <div class="adjustments">
@@ -399,7 +462,7 @@
             <span class="folder-name" id="folderName">Browser Downloads</span>
           </div>
         </div>
-        <p class="export-note">Each image keeps its exact original file name and format. Embedded camera, date, GPS, caption, and copyright details are copied when present; orientation is normalized after rendering. 4K preserves framing and aspect ratio.</p>
+        <p class="export-note">Each image keeps its exact original file name and format. Embedded camera, date, GPS, caption, and copyright details are copied when present; orientation is normalized after rendering. Exports use each photo’s selected crop and aspect ratio.</p>
         <button class="download-btn" id="downloadBtn" type="button" disabled>
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
           <span id="downloadLabel">Save photos</span>
@@ -451,6 +514,14 @@
   var finishSelectionBtn = document.getElementById('finishSelectionBtn');
   var maskEditor = document.getElementById('maskEditor');
   var selectionHelp = document.getElementById('selectionHelp');
+  var cropOverlay = document.getElementById('cropOverlay');
+  var cropOpenBtn = document.getElementById('cropOpenBtn');
+  var cropPanel = document.getElementById('cropPanel');
+  var cropDoneBtn = document.getElementById('cropDoneBtn');
+  var cropResetBtn = document.getElementById('cropResetBtn');
+  var cropSizeLabel = document.getElementById('cropSizeLabel');
+  var cropEditing = false;
+  var cropPointer = null;
   var regionMode = 'whole';
   var selectionEditing = false;
   var brushMode = 'add';
@@ -562,6 +633,119 @@
     if (hasSelection && regionMode !== 'whole') renderSelectionOverlay();
     else clearSelectionOverlay();
   }
+  function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+  function cropForPhoto(photo) {
+    if (!photo) return { x: 0, y: 0, w: 1, h: 1, ratio: 'original' };
+    if (!photo.crop) photo.crop = { x: 0, y: 0, w: 1, h: 1, ratio: 'original' };
+    return photo.crop;
+  }
+  function hasCrop(photo) {
+    var crop = cropForPhoto(photo);
+    return crop.x > .0005 || crop.y > .0005 || crop.w < .999 || crop.h < .999;
+  }
+  function cropPixels(photo) {
+    var crop = cropForPhoto(photo);
+    return {
+      x: Math.round(crop.x * photo.image.naturalWidth),
+      y: Math.round(crop.y * photo.image.naturalHeight),
+      width: Math.max(1, Math.round(crop.w * photo.image.naturalWidth)),
+      height: Math.max(1, Math.round(crop.h * photo.image.naturalHeight))
+    };
+  }
+  function updateFileDetails(photo) {
+    if (!photo) return;
+    var crop = cropPixels(photo);
+    var dimensions = hasCrop(photo)
+      ? crop.width + ' × ' + crop.height + ' px crop'
+      : photo.image.naturalWidth + ' × ' + photo.image.naturalHeight + ' px';
+    document.getElementById('fileDetails').textContent = 'Photo ' + (activeIndex + 1) + ' of ' + photos.length + ' · ' + dimensions + ' · ' + (photo.file.size / 1024 / 1024).toFixed(1) + ' MB';
+  }
+  function updateCropControls() {
+    var photo = photos[activeIndex];
+    var crop = cropForPhoto(photo);
+    cropOpenBtn.disabled = !photo;
+    cropOpenBtn.setAttribute('aria-expanded', cropEditing ? 'true' : 'false');
+    cropOpenBtn.textContent = cropEditing ? 'Cropping…' : (photo && hasCrop(photo) ? 'Edit crop' : 'Crop photo');
+    cropPanel.classList.toggle('active', cropEditing);
+    cropOverlay.classList.toggle('active', cropEditing && !!photo);
+    document.querySelectorAll('.crop-ratio').forEach(function (button) {
+      button.setAttribute('aria-pressed', button.dataset.cropRatio === crop.ratio ? 'true' : 'false');
+    });
+    if (photo) {
+      var dims = cropPixels(photo);
+      cropSizeLabel.textContent = dims.width + ' × ' + dims.height;
+      cropOverlay.style.left = (crop.x * 100) + '%';
+      cropOverlay.style.top = (crop.y * 100) + '%';
+      cropOverlay.style.width = (crop.w * 100) + '%';
+      cropOverlay.style.height = (crop.h * 100) + '%';
+      updateFileDetails(photo);
+    } else cropSizeLabel.textContent = 'Original';
+    afterClip.style.display = cropEditing ? 'none' : '';
+    compareLine.style.display = cropEditing ? 'none' : '';
+    compareKnob.style.display = cropEditing ? 'none' : '';
+    compareRange.style.display = cropEditing ? 'none' : '';
+    document.querySelectorAll('.tag').forEach(function (tag) { tag.style.display = cropEditing ? 'none' : ''; });
+    selectionCanvas.classList.toggle('visible', !cropEditing && regionMode !== 'whole' && !!(photo && photo.selection));
+    selectionBadge.classList.toggle('visible', !cropEditing && selectionEditing);
+  }
+  function setCropAspect(value) {
+    var photo = photos[activeIndex];
+    if (!photo) return;
+    var old = cropForPhoto(photo);
+    if (value === 'original') {
+      photo.crop = { x: 0, y: 0, w: 1, h: 1, ratio: 'original' };
+    } else if (value === 'free') {
+      old.ratio = 'free';
+    } else {
+      var parts = value.split(':');
+      var ratio = Number(parts[0]) / Number(parts[1]);
+      var imageRatio = photo.image.naturalWidth / photo.image.naturalHeight;
+      var width = 1, height = 1;
+      if (imageRatio > ratio) width = ratio / imageRatio;
+      else height = imageRatio / ratio;
+      var centerX = old.x + old.w / 2;
+      var centerY = old.y + old.h / 2;
+      photo.crop = {
+        x: clamp(centerX - width / 2, 0, 1 - width),
+        y: clamp(centerY - height / 2, 0, 1 - height),
+        w: width,
+        h: height,
+        ratio: value
+      };
+    }
+    updateCropControls();
+  }
+  function cropPoint(event) {
+    var rect = imageStage.getBoundingClientRect();
+    return { x: clamp((event.clientX - rect.left) / rect.width, 0, 1), y: clamp((event.clientY - rect.top) / rect.height, 0, 1) };
+  }
+  function resizeCrop(photo, pointer) {
+    var start = cropPointer.start;
+    var handle = cropPointer.handle;
+    var west = handle.indexOf('w') !== -1;
+    var north = handle.indexOf('n') !== -1;
+    var anchorX = west ? start.x + start.w : start.x;
+    var anchorY = north ? start.y + start.h : start.y;
+    var minW = Math.min(.35, 44 / Math.max(1, imageStage.clientWidth));
+    var minH = Math.min(.35, 44 / Math.max(1, imageStage.clientHeight));
+    if (start.ratio === 'free') {
+      var edgeX = west ? clamp(pointer.x, 0, anchorX - minW) : clamp(pointer.x, anchorX + minW, 1);
+      var edgeY = north ? clamp(pointer.y, 0, anchorY - minH) : clamp(pointer.y, anchorY + minH, 1);
+      photo.crop = { x: Math.min(anchorX, edgeX), y: Math.min(anchorY, edgeY), w: Math.abs(edgeX - anchorX), h: Math.abs(edgeY - anchorY), ratio: 'free' };
+      return;
+    }
+    var ratioValue = start.ratio === 'original'
+      ? photo.image.naturalWidth / photo.image.naturalHeight
+      : Number(start.ratio.split(':')[0]) / Number(start.ratio.split(':')[1]);
+    var imageRatio = photo.image.naturalWidth / photo.image.naturalHeight;
+    var maxW = west ? anchorX : 1 - anchorX;
+    var maxH = north ? anchorY : 1 - anchorY;
+    var requestedW = Math.max(Math.abs(pointer.x - anchorX), Math.abs(pointer.y - anchorY) * ratioValue / imageRatio);
+    var width = clamp(requestedW, Math.max(minW, minH * ratioValue / imageRatio), Math.min(maxW, maxH * ratioValue / imageRatio));
+    var height = width * imageRatio / ratioValue;
+    photo.crop = { x: west ? anchorX - width : anchorX, y: north ? anchorY - height : anchorY, w: width, h: height, ratio: start.ratio };
+  }
+
   function updateTrayOverrideStates() {
     photoTray.querySelectorAll('.photo-tile').forEach(function (tile, index) {
       var overridden = !!(photos[index] && photos[index].override);
@@ -689,6 +873,63 @@
       selectionBadge.textContent = brushMode === 'add' ? 'Subject selection · paint to add' : 'Subject selection · paint to erase';
     });
   });
+
+  cropOpenBtn.addEventListener('click', function () {
+    if (!photos[activeIndex]) return;
+    selectionEditing = false;
+    cropEditing = !cropEditing;
+    updateSelectionControls();
+    updateCropControls();
+    renderPreview();
+    setStatus(cropEditing ? 'Drag the crop frame or a corner · rule-of-thirds guides are shown' : 'Crop preview ready');
+  });
+  cropDoneBtn.addEventListener('click', function () {
+    if (!photos[activeIndex]) return;
+    cropEditing = false;
+    cropPointer = null;
+    updateCropControls();
+    renderPreview();
+    setStatus(hasCrop(photos[activeIndex]) ? 'Crop applied to this photo' : 'Original framing restored');
+  });
+  cropResetBtn.addEventListener('click', function () {
+    var photo = photos[activeIndex];
+    if (!photo) return;
+    photo.crop = { x: 0, y: 0, w: 1, h: 1, ratio: 'original' };
+    updateCropControls();
+    setStatus('Crop reset to the original frame');
+  });
+  document.querySelectorAll('.crop-ratio').forEach(function (button) {
+    button.addEventListener('click', function () {
+      setCropAspect(button.dataset.cropRatio);
+      setStatus(button.dataset.cropRatio === 'original' ? 'Original framing selected' : button.textContent + ' crop selected · drag to reposition');
+    });
+  });
+  cropOverlay.addEventListener('pointerdown', function (event) {
+    if (!cropEditing || !photos[activeIndex]) return;
+    event.preventDefault();
+    var handle = event.target.getAttribute('data-crop-handle');
+    cropPointer = { id: event.pointerId, handle: handle || 'move', point: cropPoint(event), start: Object.assign({}, cropForPhoto(photos[activeIndex])) };
+    cropOverlay.setPointerCapture(event.pointerId);
+  });
+  cropOverlay.addEventListener('pointermove', function (event) {
+    if (!cropPointer || cropPointer.id !== event.pointerId) return;
+    var photo = photos[activeIndex];
+    var pointer = cropPoint(event);
+    if (cropPointer.handle === 'move') {
+      var dx = pointer.x - cropPointer.point.x;
+      var dy = pointer.y - cropPointer.point.y;
+      photo.crop.x = clamp(cropPointer.start.x + dx, 0, 1 - cropPointer.start.w);
+      photo.crop.y = clamp(cropPointer.start.y + dy, 0, 1 - cropPointer.start.h);
+    } else resizeCrop(photo, pointer);
+    updateCropControls();
+  });
+  function endCropPointer(event) {
+    if (!cropPointer || cropPointer.id !== event.pointerId) return;
+    if (cropOverlay.hasPointerCapture(event.pointerId)) cropOverlay.releasePointerCapture(event.pointerId);
+    cropPointer = null;
+  }
+  cropOverlay.addEventListener('pointerup', endCropPointer);
+  cropOverlay.addEventListener('pointercancel', endCropPointer);
 
   packaging.addEventListener('change', updateDownloadLabel);
   if (!('showDirectoryPicker' in window)) {
@@ -847,7 +1088,8 @@
     var ctx = selectionCanvas.getContext('2d');
     ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(small, 0, 0, selectionCanvas.width, selectionCanvas.height);
+    var crop = cropEditing ? { x: 0, y: 0, w: 1, h: 1 } : cropForPhoto(photo);
+    ctx.drawImage(small, crop.x * mask.width, crop.y * mask.height, crop.w * mask.width, crop.h * mask.height, 0, 0, selectionCanvas.width, selectionCanvas.height);
   }
 
   function paintSelection(event) {
@@ -856,8 +1098,9 @@
     var rect = selectionCanvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     var mask = photo.selection;
-    var cx = (event.clientX - rect.left) / rect.width * mask.width;
-    var cy = (event.clientY - rect.top) / rect.height * mask.height;
+    var crop = cropForPhoto(photo);
+    var cx = (crop.x + (event.clientX - rect.left) / rect.width * crop.w) * mask.width;
+    var cy = (crop.y + (event.clientY - rect.top) / rect.height * crop.h) * mask.height;
     var radius = Math.max(5, Math.min(mask.width, mask.height) * .075);
     var minX = Math.max(0, Math.floor(cx - radius));
     var maxX = Math.min(mask.width - 1, Math.ceil(cx + radius));
@@ -1042,9 +1285,10 @@
     return imageData;
   }
 
-  function enhanceWithRegions(imageData, photo) {
+  function enhanceWithRegions(imageData, photo, renderedCrop) {
     var width = imageData.width;
     var height = imageData.height;
+    var crop = renderedCrop || { x: 0, y: 0, w: 1, h: 1 };
     var raw = new Uint8ClampedArray(imageData.data);
     var base = enhance(new ImageData(new Uint8ClampedArray(raw), width, height), settingsForPhoto(photo));
     if (!photo || !photo.selection || !photo.regionSettings || (!photo.regionSettings.subject && !photo.regionSettings.background)) return base;
@@ -1057,9 +1301,9 @@
     var mask = photo.selection;
     var out = new ImageData(width, height);
     for (var y = 0; y < height; y++) {
-      var my = Math.min(mask.height - 1, Math.floor(y / height * mask.height));
+      var my = Math.min(mask.height - 1, Math.floor((crop.y + y / height * crop.h) * mask.height));
       for (var x = 0; x < width; x++) {
-        var mx = Math.min(mask.width - 1, Math.floor(x / width * mask.width));
+        var mx = Math.min(mask.width - 1, Math.floor((crop.x + x / width * crop.w) * mask.width));
         var mix = mask.data[my * mask.width + mx] / 255;
         var p = (y * width + x) * 4;
         out.data[p] = background.data[p] + (subject.data[p] - background.data[p]) * mix;
@@ -1071,12 +1315,14 @@
     return out;
   }
 
-  function drawSource(canvas, width, height, image) {
+  function drawSource(canvas, width, height, image, crop) {
     canvas.width = width; canvas.height = height;
     var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    var source = image || sourceImage;
+    var frame = crop || { x: 0, y: 0, w: 1, h: 1 };
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(image || sourceImage, 0, 0, width, height);
+    ctx.drawImage(source, frame.x * source.naturalWidth, frame.y * source.naturalHeight, frame.w * source.naturalWidth, frame.h * source.naturalHeight, 0, 0, width, height);
     return ctx;
   }
 
@@ -1088,17 +1334,21 @@
     setTimeout(function () {
       if (token !== renderToken) return;
       try {
-        var dims = fitDimensions(sourceImage.naturalWidth, sourceImage.naturalHeight, 1400, false);
-        var beforeCtx = drawSource(beforeCanvas, dims.width, dims.height);
+        var photo = photos[activeIndex];
+        var renderedCrop = cropEditing ? { x: 0, y: 0, w: 1, h: 1 } : cropForPhoto(photo);
+        var sourceWidth = Math.max(1, Math.round(sourceImage.naturalWidth * renderedCrop.w));
+        var sourceHeight = Math.max(1, Math.round(sourceImage.naturalHeight * renderedCrop.h));
+        var dims = fitDimensions(sourceWidth, sourceHeight, 1400, false);
+        var beforeCtx = drawSource(beforeCanvas, dims.width, dims.height, sourceImage, renderedCrop);
         afterCanvas.width = dims.width; afterCanvas.height = dims.height;
         var afterCtx = afterCanvas.getContext('2d', { willReadFrequently: true });
-        var photo = photos[activeIndex];
         var original = beforeCtx.getImageData(0, 0, dims.width, dims.height);
-        afterCtx.putImageData(enhanceWithRegions(original, photo), 0, 0);
+        afterCtx.putImageData(enhanceWithRegions(original, photo, renderedCrop), 0, 0);
         imageStage.style.setProperty('--ratio', dims.width + '/' + dims.height);
         renderSelectionOverlay();
         processing.classList.remove('active');
-        setStatus('Preview ready · drag the divider to compare');
+        updateCropControls();
+        setStatus(cropEditing ? 'Drag the crop frame or a corner · rule-of-thirds guides are shown' : 'Preview ready · drag the divider to compare');
       } catch (error) {
         processing.classList.remove('active');
         setStatus('This photo is too large to preview on this device. Try a smaller copy.', true);
@@ -1123,7 +1373,9 @@
     sourceImage = photo.image;
     sourceName = photo.name;
     document.getElementById('fileName').textContent = photo.file.name;
-    document.getElementById('fileDetails').textContent = 'Photo ' + (index + 1) + ' of ' + photos.length + ' · ' + photo.image.naturalWidth + ' × ' + photo.image.naturalHeight + ' px · ' + (photo.file.size / 1024 / 1024).toFixed(1) + ' MB';
+    cropEditing = false;
+    cropPointer = null;
+    updateFileDetails(photo);
     photoTray.querySelectorAll('.photo-tile').forEach(function (tile, tileIndex) {
       tile.classList.toggle('active', tileIndex === index);
       tile.setAttribute('aria-pressed', tileIndex === index ? 'true' : 'false');
@@ -1134,6 +1386,7 @@
     updatePresetState(values);
     updateBatchScope();
     updateSelectionControls();
+    updateCropControls();
     updateTrayOverrideStates();
     if (regionMode !== 'whole' && !photo.selection) {
       ensureRegionSettings(photo, regionMode);
@@ -1192,7 +1445,7 @@
       var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function () {
-        loaded[index] = { file: file, image: img, url: url, name: file.name.replace(/\.[^.]+$/, '') || ('photo-' + (index + 1)), override: null, regionSettings: { subject: null, background: null }, selection: null };
+        loaded[index] = { file: file, image: img, url: url, name: file.name.replace(/\.[^.]+$/, '') || ('photo-' + (index + 1)), override: null, regionSettings: { subject: null, background: null }, selection: null, crop: { x: 0, y: 0, w: 1, h: 1, ratio: 'original' } };
         finishOne();
       };
       img.onerror = function () {
@@ -1241,11 +1494,12 @@
     compareKnob.style.left = value + '%';
   });
 
-  function exportDimensions(image) {
+  function exportDimensions(photo) {
     var choice = resolution.value;
+    var crop = cropPixels(photo);
     var dims = choice === 'original'
-      ? { width: image.naturalWidth, height: image.naturalHeight }
-      : fitDimensions(image.naturalWidth, image.naturalHeight, Number(choice), true);
+      ? { width: crop.width, height: crop.height }
+      : fitDimensions(crop.width, crop.height, Number(choice), true);
     var maxPixels = 14000000;
     if (dims.width * dims.height > maxPixels) {
       var safeScale = Math.sqrt(maxPixels / (dims.width * dims.height));
@@ -1502,11 +1756,12 @@
   function buildEnhancedBlob(photo, settings, shouldPreserveMetadata, done) {
     setTimeout(function () {
       try {
-        var dims = exportDimensions(photo.image);
+        var dims = exportDimensions(photo);
+        var crop = cropForPhoto(photo);
         var canvas = document.createElement('canvas');
-        var ctx = drawSource(canvas, dims.width, dims.height, photo.image);
+        var ctx = drawSource(canvas, dims.width, dims.height, photo.image, crop);
         var pixels = ctx.getImageData(0, 0, dims.width, dims.height);
-        ctx.putImageData(enhanceWithRegions(pixels, photo), 0, 0);
+        ctx.putImageData(enhanceWithRegions(pixels, photo, crop), 0, 0);
         var outputType = /^(image\/jpeg|image\/png|image\/webp)$/.test(photo.file.type) ? photo.file.type : 'image/jpeg';
         canvas.toBlob(function (blob) {
           canvas.width = 1;
