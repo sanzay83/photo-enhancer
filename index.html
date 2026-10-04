@@ -1,0 +1,1701 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <title>Photo Enhancer</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f5f1;
+      --surface: #ffffff;
+      --surface-2: #eceee9;
+      --ink: #18201c;
+      --muted: #5d6862;
+      --line: #d8ddd7;
+      --accent: #146b4c;
+      --accent-deep: #0c5138;
+      --accent-soft: #dceee6;
+      --warm: #d9673b;
+      --shadow: 0 18px 48px rgba(24,32,28,.10);
+      --radius-lg: 28px;
+      --radius-md: 16px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111512;
+        --surface: #1a201c;
+        --surface-2: #242b26;
+        --ink: #f2f5f1;
+        --muted: #aab4ad;
+        --line: #343e37;
+        --accent: #71cca4;
+        --accent-deep: #91dbba;
+        --accent-soft: #1f3b2e;
+        --warm: #ef8a63;
+        --shadow: 0 22px 55px rgba(0,0,0,.34);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 90% 0%, color-mix(in srgb, var(--accent-soft) 70%, transparent) 0, transparent 28rem),
+        var(--bg);
+      color: var(--ink);
+      font-family: "DM Sans", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button, label, input[type="range"], select { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px; }
+
+    main { width: min(1240px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 max(40px, env(safe-area-inset-bottom)); }
+    .intro { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 24px; margin-bottom: 28px; }
+    .intro h1 { font-family: "Newsreader", serif; font-size: clamp(2.35rem, 5vw, 4.65rem); line-height: .95; font-weight: 600; letter-spacing: -.045em; margin: 0 0 12px; max-width: 760px; }
+    .intro p { margin: 0; max-width: 680px; color: var(--muted); font-size: clamp(.98rem, 1.6vw, 1.15rem); line-height: 1.55; }
+    .privacy-note { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: .82rem; white-space: nowrap; padding-bottom: 6px; }
+    .privacy-note svg { width: 16px; height: 16px; color: var(--accent); }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; align-items: start; }
+    .viewer, .controls { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .viewer { min-height: 560px; border-radius: var(--radius-lg) 10px var(--radius-lg) var(--radius-lg); overflow: hidden; display: grid; place-items: center; position: relative; }
+
+    .empty { width: 100%; min-height: 560px; padding: 48px 28px; display: grid; place-items: center; text-align: center; }
+    .drop-card { width: min(520px, 100%); border: 1.5px dashed var(--line); border-radius: 24px 8px 24px 24px; padding: clamp(38px, 7vw, 68px) 24px; transition: border-color .2s, background .2s; }
+    .drop-card.drag { border-color: var(--accent); background: var(--accent-soft); }
+    .drop-icon { width: 64px; height: 64px; margin: 0 auto 24px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-deep); border-radius: 50% 50% 14px 50%; }
+    .drop-icon svg { width: 28px; height: 28px; }
+    .drop-card h2 { font-family: "Newsreader", serif; font-size: 2rem; letter-spacing: -.025em; margin: 0 0 8px; }
+    .drop-card p { margin: 0 0 24px; color: var(--muted); line-height: 1.5; }
+    .upload-btn, .download-btn, .secondary-btn {
+      border: 0; cursor: pointer; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-weight: 700; border-radius: 12px 4px 12px 12px; transition: background .18s, color .18s, transform .18s;
+    }
+    .upload-btn, .download-btn { background: var(--accent); color: #fff; padding: 0 21px; }
+    @media (prefers-color-scheme: dark) { .upload-btn, .download-btn { color: #0c1d15; } }
+    .upload-btn:hover, .download-btn:hover { background: var(--accent-deep); }
+    .upload-btn:active, .download-btn:active, .secondary-btn:active { transform: translateY(1px); }
+    .upload-btn svg, .download-btn svg, .secondary-btn svg { width: 18px; height: 18px; }
+    .file-picker { display: inline-block; width: 178px; max-width: 100%; color: transparent; overflow: hidden; cursor: pointer; }
+    .file-picker::file-selector-button { border: 0; cursor: pointer; min-height: 48px; width: 178px; background: var(--accent); color: #fff; padding: 0 18px; font: 700 1rem "DM Sans", sans-serif; border-radius: 12px 4px 12px 12px; }
+    .change-picker { width: 112px; color: transparent; overflow: hidden; cursor: pointer; }
+    .change-picker::file-selector-button { width: 112px; min-height: 38px; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 0 12px; border-radius: 10px 4px 10px 10px; cursor: pointer; font: 600 .86rem "DM Sans", sans-serif; }
+    @media (prefers-color-scheme: dark) { .file-picker::file-selector-button { color: #0c1d15; } }
+
+    .editor { width: 100%; min-height: 560px; display: none; flex-direction: column; }
+    .editor.active { display: flex; }
+    .viewer-toolbar { min-height: 60px; padding: 10px 14px 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); }
+    .file-meta { min-width: 0; }
+    .photo-tray { display: none; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; max-height: 150px; overflow-y: auto; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+    .photo-tray.active { display: grid; }
+    .photo-tile { min-width: 0; min-height: 54px; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; align-items: center; padding: 5px; border: 1px solid transparent; border-radius: 9px 3px 9px 9px; background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
+    .photo-tile:hover { background: var(--surface); }
+    .photo-tile.active { background: var(--surface); border-color: var(--accent); }
+    .photo-tile.override { box-shadow: inset 0 -3px 0 var(--warm); }
+    .photo-tile img { width: 42px; height: 42px; border-radius: 6px 2px 6px 6px; object-fit: cover; background: #202420; }
+    .photo-tile span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .72rem; font-weight: 600; }
+    .file-meta strong { display: block; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .92rem; }
+    .file-meta span { display: block; color: var(--muted); font-size: .75rem; margin-top: 2px; }
+    .change-btn { border: 1px solid var(--line); background: transparent; color: var(--ink); min-height: 38px; padding: 0 13px; border-radius: 10px 4px 10px 10px; cursor: pointer; font-weight: 600; }
+    .canvas-area { position: relative; flex: 1; min-height: 480px; padding: 24px; background-color: #202420; background-image: linear-gradient(45deg,#252a26 25%,transparent 25%),linear-gradient(-45deg,#252a26 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#252a26 75%),linear-gradient(-45deg,transparent 75%,#252a26 75%); background-size: 20px 20px; background-position: 0 0,0 10px,10px -10px,-10px 0; display: grid; place-items: center; }
+    .image-stage { --ratio: 1; position: relative; width: min(100%, calc(68vh * var(--ratio))); aspect-ratio: var(--ratio); max-height: 68vh; overflow: hidden; box-shadow: 0 14px 38px rgba(0,0,0,.34); touch-action: none; user-select: none; }
+    .image-stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+    .after-clip { position: absolute; inset: 0 auto 0 0; width: 50%; overflow: hidden; }
+    .after-clip canvas { width: calc(100% / var(--clip, .5)); max-width: none; }
+    .compare-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.18); transform: translateX(-1px); pointer-events: none; }
+    .compare-knob { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 42px; height: 42px; border-radius: 50%; background: #fff; color: #1b211d; display: grid; place-items: center; box-shadow: 0 4px 16px rgba(0,0,0,.25); pointer-events: none; }
+    .compare-knob svg { width: 22px; height: 22px; }
+    #compareRange { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+    #selectionCanvas { z-index: 4; display: none; pointer-events: none; }
+    #selectionCanvas.visible { display: block; }
+    #selectionCanvas.editing { pointer-events: auto; cursor: crosshair; }
+    .selection-badge { position: absolute; z-index: 4; left: 50%; bottom: 12px; transform: translateX(-50%); display: none; padding: 6px 10px; border-radius: 7px; background: rgba(15,18,16,.82); color: #fff; font-size: .7rem; font-weight: 700; white-space: nowrap; pointer-events: none; }
+    .selection-badge.visible { display: block; }
+    .tag { position: absolute; top: 12px; padding: 5px 9px; border-radius: 6px; color: #fff; background: rgba(15,18,16,.72); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; pointer-events: none; }
+    .tag.before { right: 12px; } .tag.after { left: 12px; }
+
+    .controls { border-radius: 10px var(--radius-lg) var(--radius-lg) var(--radius-lg); padding: 22px; position: sticky; top: 18px; }
+    .controls h2 { font-family: "Newsreader", serif; font-size: 1.55rem; margin: 0 0 18px; letter-spacing: -.02em; }
+    .preset-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 24px; }
+    .preset { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); min-height: 38px; border-radius: 9px 3px 9px 9px; cursor: pointer; font-size: .78rem; font-weight: 700; }
+    .preset.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-deep); }
+    .batch-scope { display: none; align-items: center; justify-content: space-between; gap: 12px; margin: -8px 0 22px; padding: 12px; background: var(--surface-2); border-radius: 10px 4px 10px 10px; }
+    .batch-scope.active { display: flex; }
+    .scope-copy { min-width: 0; }
+    .scope-copy strong { display: block; font-size: .8rem; }
+    .scope-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: .7rem; line-height: 1.35; }
+    .override-btn { flex: 0 0 auto; min-height: 34px; border: 1px solid var(--line); border-radius: 8px 3px 8px 8px; padding: 0 10px; background: var(--surface); color: var(--ink); cursor: pointer; font-size: .72rem; font-weight: 700; }
+    .override-btn[aria-pressed="true"] { border-color: var(--warm); color: var(--warm); }
+    .override-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .selection-tools { margin: 0 0 20px; }
+    .selection-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .selection-title strong { font-size: .78rem; }
+    .selection-title span { color: var(--muted); font-size: .68rem; }
+    .region-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; background: var(--surface-2); border-radius: 11px 4px 11px 11px; }
+    .region-tab { min-height: 34px; border: 0; border-radius: 8px 3px 8px 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: .72rem; font-weight: 700; }
+    .region-tab[aria-pressed="true"] { background: var(--surface); color: var(--accent-deep); box-shadow: 0 1px 4px rgba(24,32,28,.09); }
+    .selection-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; margin-top: 8px; }
+    .selection-btn { min-height: 36px; border: 1px solid var(--line); border-radius: 9px 3px 9px 9px; padding: 0 10px; background: transparent; color: var(--ink); cursor: pointer; font-size: .72rem; font-weight: 700; }
+    .selection-btn.primary { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--accent-deep); }
+    .selection-btn:disabled { opacity: .48; cursor: not-allowed; }
+    .mask-editor { display: none; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 7px; }
+    .mask-editor.active { display: grid; }
+    .mask-editor .selection-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); }
+    .selection-help { margin: 7px 1px 0; color: var(--muted); font-size: .68rem; line-height: 1.4; }
+    .adjustments { display: grid; gap: 10px; }
+    .adjust-panels { display: grid; align-items: end; }
+    .adjust { display: none; padding: 12px 13px 10px; background: var(--surface-2); border-radius: 12px 4px 12px 12px; }
+    .adjust.active { display: block; }
+    .adjust-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .adjust-head label { font-size: .86rem; font-weight: 700; }
+    .adjust-head output { font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; font-size: .76rem; color: var(--muted); }
+    .adjust-note { margin: 7px 0 0; color: var(--muted); font-size: .7rem; line-height: 1.35; }
+    .adjustment-icons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .adjust-icon { width: 100%; aspect-ratio: 1; min-height: 44px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 9px 3px 9px 9px; background: transparent; color: var(--muted); cursor: pointer; }
+    .adjust-icon:hover { background: var(--surface-2); color: var(--ink); }
+    .adjust-icon[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-deep); }
+    .adjust-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    input[type="range"].slider { width: 100%; height: 18px; margin: 0; appearance: none; background: transparent; cursor: pointer; }
+    input[type="range"].slider::-webkit-slider-runnable-track { height: 4px; border-radius: 3px; background: linear-gradient(to right, var(--accent) var(--fill,50%), var(--line) var(--fill,50%)); }
+    input[type="range"].slider::-moz-range-track { height: 4px; border-radius: 3px; background: var(--line); }
+    input[type="range"].slider::-moz-range-progress { height: 4px; background: var(--accent); }
+    input[type="range"].slider::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); margin-top: -7px; box-shadow: 0 1px 4px rgba(0,0,0,.16); }
+    input[type="range"].slider::-moz-range-thumb { width: 15px; height: 15px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+    .divider { height: 1px; background: var(--line); margin: 23px 0 18px; }
+    .export-label { display: block; font-size: .76rem; font-weight: 700; color: var(--muted); margin: 0 0 7px; }
+    select { width: 100%; min-height: 43px; border: 1px solid var(--line); border-radius: 10px 4px 10px 10px; background: var(--surface-2); color: var(--ink); padding: 0 34px 0 12px; }
+    .export-field + .export-field { margin-top: 14px; }
+    .folder-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px; align-items: center; }
+    .folder-btn { min-height: 41px; border: 1px solid var(--line); border-radius: 10px 4px 10px 10px; background: var(--surface-2); color: var(--ink); padding: 0 12px; cursor: pointer; font-weight: 700; font-size: .82rem; }
+    .folder-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .folder-name { min-width: 0; color: var(--muted); font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .export-note { color: var(--muted); font-size: .74rem; line-height: 1.4; margin: 9px 0 15px; }
+    .download-btn { width: 100%; }
+    .download-btn:disabled { opacity: .55; cursor: wait; }
+    .secondary-btn { width: 100%; background: transparent; color: var(--muted); padding: 0 16px; margin-top: 7px; min-height: 40px; }
+    .status { min-height: 18px; color: var(--muted); font-size: .74rem; line-height: 1.4; margin-top: 10px; text-align: center; }
+    .status.error { color: #b94432; }
+    .processing { position: absolute; inset: 0; background: rgba(15,18,16,.52); color: #fff; display: none; place-items: center; z-index: 5; backdrop-filter: blur(2px); }
+    .processing.active { display: grid; }
+    .processing span { background: rgba(15,18,16,.82); padding: 11px 15px; border-radius: 10px; font-size: .82rem; font-weight: 700; }
+
+    @media (max-width: 900px) {
+      main { padding-top: 30px; }
+      .intro { grid-template-columns: 1fr; gap: 10px; }
+      .privacy-note { padding: 0; }
+      .workspace { grid-template-columns: 1fr; }
+      .controls { position: static; border-radius: var(--radius-lg); }
+      .viewer { min-height: 500px; }
+      .empty { min-height: 500px; }
+    }
+    @media (max-width: 560px) {
+      main { width: min(100% - 20px, 1240px); padding-top: 24px; }
+      .intro { margin-bottom: 20px; }
+      .intro h1 { font-size: 2.55rem; max-width: 330px; }
+      .intro p { font-size: .95rem; }
+      .viewer { border-radius: 20px 6px 20px 20px; min-height: 420px; }
+      .empty { min-height: 420px; padding: 20px 14px; }
+      .drop-card { padding: 40px 18px; border-radius: 18px 6px 18px 18px; }
+      .editor { min-height: 420px; }
+      .canvas-area { min-height: 350px; padding: 12px; }
+      .image-stage { width: min(100%, calc(58vh * var(--ratio))); max-height: 58vh; }
+      .controls { padding: 20px 16px; }
+      .file-meta strong { max-width: 170px; }
+      .change-picker, .change-picker::file-selector-button { width: 104px; }
+      .photo-tray { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 136px; padding: 9px 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="intro" aria-labelledby="main-title">
+      <div>
+        <h1 id="main-title">Bring out what’s already there.</h1>
+        <p>A precise, non-AI photo enhancer for cleaner detail, balanced light, and professional 4K exports—one photo or a whole batch.</p>
+      </div>
+      <div class="privacy-note" aria-label="Photos stay on your device">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M12 14v3"/></svg>
+        Processed on your device
+      </div>
+    </section>
+
+    <section class="workspace" aria-label="Photo enhancement workspace">
+      <div class="viewer">
+        <div class="empty" id="emptyState">
+          <div class="drop-card" id="dropCard">
+            <div class="drop-icon">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m4 17 4.5-4 3 2.5 3.5-3 5 4.5"/></svg>
+            </div>
+            <h2>Choose your photos</h2>
+            <p>Select up to 50 JPEG, PNG, or WebP images. Start with shared batch settings, then fine-tune any photo individually.</p>
+            <input id="fileInput" class="file-picker" type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="Select photos" />
+          </div>
+        </div>
+
+        <div class="editor" id="editor">
+          <div class="viewer-toolbar">
+            <div class="file-meta">
+              <strong id="fileName">Photo</strong>
+              <span id="fileDetails"></span>
+            </div>
+            <input id="changeInput" class="change-picker" type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="Choose a new batch of photos" title="Choose a new batch" />
+          </div>
+          <div class="photo-tray" id="photoTray" aria-label="Selected photos"></div>
+          <div class="canvas-area">
+            <div class="image-stage" id="imageStage">
+              <canvas id="beforeCanvas" aria-label="Original photo"></canvas>
+              <div class="after-clip" id="afterClip">
+                <canvas id="afterCanvas" aria-label="Enhanced photo"></canvas>
+              </div>
+              <span class="tag before">Before</span>
+              <span class="tag after">After</span>
+              <div class="compare-line" id="compareLine"></div>
+              <div class="compare-knob" id="compareKnob">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 7-5 5 5 5M15 7l5 5-5 5"/></svg>
+              </div>
+              <input id="compareRange" type="range" min="0" max="100" value="50" aria-label="Move to compare before and after" />
+              <canvas id="selectionCanvas" aria-label="Subject selection overlay"></canvas>
+              <span class="selection-badge" id="selectionBadge">Subject selection · paint to add</span>
+              <div class="processing" id="processing"><span>Refining preview…</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="controls" aria-label="Enhancement controls">
+        <h2>Finish</h2>
+        <div class="preset-row" role="group" aria-label="Enhancement presets">
+          <button class="preset active" data-preset="natural" type="button">Natural</button>
+          <button class="preset" data-preset="crisp" type="button">Crisp</button>
+          <button class="preset" data-preset="soft" type="button">Gentle</button>
+        </div>
+
+        <div class="batch-scope" id="batchScope">
+          <div class="scope-copy">
+            <strong id="scopeTitle">Batch settings</strong>
+            <span id="scopeText">Applied to every photo without an override.</span>
+          </div>
+          <button class="override-btn" id="overrideBtn" type="button" aria-pressed="false">Override photo</button>
+        </div>
+
+        <div class="selection-tools" aria-label="Subject and background adjustments">
+          <div class="selection-title">
+            <strong>Adjustment area</strong>
+            <span>Sharpness depth</span>
+          </div>
+          <div class="region-tabs" role="group" aria-label="Choose adjustment area">
+            <button class="region-tab" type="button" data-region="whole" aria-pressed="true">Whole photo</button>
+            <button class="region-tab" type="button" data-region="subject" aria-pressed="false">Front object</button>
+            <button class="region-tab" type="button" data-region="background" aria-pressed="false">Background</button>
+          </div>
+          <div class="selection-actions">
+            <button class="selection-btn primary" id="autoSelectBtn" type="button" disabled>Auto-select front object</button>
+            <button class="selection-btn" id="refineSelectionBtn" type="button" disabled>Update</button>
+          </div>
+          <div class="mask-editor" id="maskEditor" role="group" aria-label="Update subject selection">
+            <button class="selection-btn" type="button" data-brush="add" aria-pressed="true">Add area</button>
+            <button class="selection-btn" type="button" data-brush="erase" aria-pressed="false">Erase area</button>
+            <button class="selection-btn" id="finishSelectionBtn" type="button">Done</button>
+          </div>
+          <p class="selection-help" id="selectionHelp">Auto-select estimates the in-focus front object from local sharpness. You can update the selection by painting or erasing.</p>
+        </div>
+
+        <div class="adjustments">
+          <div class="adjust-panels" aria-live="polite">
+            <div class="adjust" id="panel-smoothness">
+              <div class="adjust-head"><label for="smoothness">Smoothness</label><output id="smoothnessOut">42</output></div>
+              <input class="slider" id="smoothness" type="range" min="0" max="100" value="42" />
+              <p class="adjust-note">Softens facial grain while protecting stronger edges.</p>
+            </div>
+            <div class="adjust" id="panel-denoise">
+              <div class="adjust-head"><label for="denoise">Noise reduction</label><output id="denoiseOut">34</output></div>
+              <input class="slider" id="denoise" type="range" min="0" max="100" value="34" />
+            </div>
+            <div class="adjust" id="panel-sharpen">
+              <div class="adjust-head"><label for="sharpen">Sharpness</label><output id="sharpenOut">32</output></div>
+              <input class="slider" id="sharpen" type="range" min="0" max="100" value="32" />
+            </div>
+            <div class="adjust" id="panel-clarity">
+              <div class="adjust-head"><label for="clarity">Clarity</label><output id="clarityOut">14</output></div>
+              <input class="slider" id="clarity" type="range" min="0" max="100" value="14" />
+            </div>
+            <div class="adjust" id="panel-exposure">
+              <div class="adjust-head"><label for="exposure">Exposure</label><output id="exposureOut">0</output></div>
+              <input class="slider" id="exposure" type="range" min="-50" max="50" value="0" />
+            </div>
+            <div class="adjust" id="panel-shadows">
+              <div class="adjust-head"><label for="shadows">Shadow recovery</label><output id="shadowsOut">18</output></div>
+              <input class="slider" id="shadows" type="range" min="0" max="100" value="18" />
+              <p class="adjust-note">Reveals detail in darker areas without lifting the whole image.</p>
+            </div>
+            <div class="adjust" id="panel-highlights">
+              <div class="adjust-head"><label for="highlights">Highlight recovery</label><output id="highlightsOut">16</output></div>
+              <input class="slider" id="highlights" type="range" min="0" max="100" value="16" />
+              <p class="adjust-note">Restores texture in bright areas while leaving midtones natural.</p>
+            </div>
+            <div class="adjust" id="panel-contrast">
+              <div class="adjust-head"><label for="contrast">Contrast</label><output id="contrastOut">8</output></div>
+              <input class="slider" id="contrast" type="range" min="-50" max="50" value="8" />
+            </div>
+            <div class="adjust" id="panel-colorBalance">
+              <div class="adjust-head"><label for="colorBalance">Color tone balance</label><output id="colorBalanceOut">35</output></div>
+              <input class="slider" id="colorBalance" type="range" min="0" max="100" value="35" />
+              <p class="adjust-note">Evens out a strong color cast by reducing an over-dominant channel and restoring the others.</p>
+            </div>
+            <div class="adjust" id="panel-warmth">
+              <div class="adjust-head"><label for="warmth">Warmth</label><output id="warmthOut">0</output></div>
+              <input class="slider" id="warmth" type="range" min="-50" max="50" value="0" />
+            </div>
+          </div>
+          <div class="adjustment-icons" role="toolbar" aria-label="Photo adjustments">
+            <button class="adjust-icon" type="button" data-control="smoothness" aria-controls="panel-smoothness" aria-expanded="false" aria-label="Smoothness" title="Smoothness"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7c3-2 5 2 8 0s5 2 8 0M4 12c3-2 5 2 8 0s5 2 8 0M4 17c3-2 5 2 8 0s5 2 8 0"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="denoise" aria-controls="panel-denoise" aria-expanded="false" aria-label="Noise reduction" title="Noise reduction"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="7" cy="7" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="18" cy="13" r="1"/><circle cx="9" cy="16" r="1"/><path d="M4 20 20 4"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="sharpen" aria-controls="panel-sharpen" aria-expanded="false" aria-label="Sharpness" title="Sharpness"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3 3-6Z"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="clarity" aria-controls="panel-clarity" aria-expanded="false" aria-label="Clarity" title="Clarity"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 4v2M20 12h-2M12 20v-2M4 12h2"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="exposure" aria-controls="panel-exposure" aria-expanded="false" aria-label="Exposure" title="Exposure"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="shadows" aria-controls="panel-shadows" aria-expanded="false" aria-label="Shadow recovery" title="Shadow recovery"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c-4 3-9 2-11-2-1.4-2.8-.5-5.4 2-7Z"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="highlights" aria-controls="panel-highlights" aria-expanded="false" aria-label="Highlight recovery" title="Highlight recovery"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M8.2 14.5A6 6 0 1 1 15.8 14.5C14.7 15.3 14 16.4 14 18h-4c0-1.6-.7-2.7-1.8-3.5Z"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="contrast" aria-controls="panel-contrast" aria-expanded="false" aria-label="Contrast" title="Contrast"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18V3Z" fill="currentColor" stroke="none"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="colorBalance" aria-controls="panel-colorBalance" aria-expanded="false" aria-label="Color tone balance" title="Color tone balance"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><circle cx="8.5" cy="14.5" r="5"/><circle cx="15.5" cy="14.5" r="5"/></svg></button>
+            <button class="adjust-icon" type="button" data-control="warmth" aria-controls="panel-warmth" aria-expanded="false" aria-label="Warmth" title="Warmth"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4.5 4.5 0 1 0 4 0Z"/><path d="M12 8v8"/></svg></button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="export-field">
+          <label class="export-label" for="resolution">Export size</label>
+          <select id="resolution">
+            <option value="original">Original dimensions</option>
+            <option value="2160">2K · up to 2160 px</option>
+            <option value="3840" selected>4K · up to 3840 px</option>
+          </select>
+        </div>
+        <div class="export-field">
+          <label class="export-label" for="packaging">Save as</label>
+          <select id="packaging">
+            <option value="separate" selected>Separate image files</option>
+            <option value="zip">One ZIP archive</option>
+          </select>
+        </div>
+        <div class="export-field">
+          <label class="export-label" for="metadataPolicy">Embedded metadata</label>
+          <select id="metadataPolicy">
+            <option value="preserve" selected>Preserve from originals</option>
+            <option value="remove">Remove from exports</option>
+          </select>
+        </div>
+        <div class="export-field">
+          <span class="export-label">Output folder</span>
+          <div class="folder-row">
+            <button class="folder-btn" id="chooseFolderBtn" type="button">Choose folder</button>
+            <span class="folder-name" id="folderName">Browser Downloads</span>
+          </div>
+        </div>
+        <p class="export-note">Each image keeps its exact original file name and format. Embedded camera, date, GPS, caption, and copyright details are copied when present; orientation is normalized after rendering. 4K preserves framing and aspect ratio.</p>
+        <button class="download-btn" id="downloadBtn" type="button" disabled>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+          <span id="downloadLabel">Save photos</span>
+        </button>
+        <button class="secondary-btn" id="resetBtn" type="button" disabled>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4v6h6"/><path d="M5.5 15a7.5 7.5 0 1 0 .3-7.3L4 10"/></svg>
+          Reset adjustments
+        </button>
+        <div class="status" id="status" aria-live="polite">Choose one or more photos to begin.</div>
+      </aside>
+    </section>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+  var input = document.getElementById('fileInput');
+  var changeInput = document.getElementById('changeInput');
+  var emptyState = document.getElementById('emptyState');
+  var editor = document.getElementById('editor');
+  var dropCard = document.getElementById('dropCard');
+  var beforeCanvas = document.getElementById('beforeCanvas');
+  var afterCanvas = document.getElementById('afterCanvas');
+  var imageStage = document.getElementById('imageStage');
+  var afterClip = document.getElementById('afterClip');
+  var compareRange = document.getElementById('compareRange');
+  var compareLine = document.getElementById('compareLine');
+  var compareKnob = document.getElementById('compareKnob');
+  var processing = document.getElementById('processing');
+  var processingText = processing.querySelector('span');
+  var status = document.getElementById('status');
+  var downloadBtn = document.getElementById('downloadBtn');
+  var downloadLabel = document.getElementById('downloadLabel');
+  var resetBtn = document.getElementById('resetBtn');
+  var resolution = document.getElementById('resolution');
+  var packaging = document.getElementById('packaging');
+  var metadataPolicy = document.getElementById('metadataPolicy');
+  var chooseFolderBtn = document.getElementById('chooseFolderBtn');
+  var folderName = document.getElementById('folderName');
+  var photoTray = document.getElementById('photoTray');
+  var batchScope = document.getElementById('batchScope');
+  var scopeTitle = document.getElementById('scopeTitle');
+  var scopeText = document.getElementById('scopeText');
+  var overrideBtn = document.getElementById('overrideBtn');
+  var selectionCanvas = document.getElementById('selectionCanvas');
+  var selectionBadge = document.getElementById('selectionBadge');
+  var autoSelectBtn = document.getElementById('autoSelectBtn');
+  var refineSelectionBtn = document.getElementById('refineSelectionBtn');
+  var finishSelectionBtn = document.getElementById('finishSelectionBtn');
+  var maskEditor = document.getElementById('maskEditor');
+  var selectionHelp = document.getElementById('selectionHelp');
+  var regionMode = 'whole';
+  var selectionEditing = false;
+  var brushMode = 'add';
+  var brushDown = false;
+  var photos = [];
+  var directoryHandle = null;
+  var activeIndex = 0;
+  var sourceImage = null;
+  var sourceName = '';
+  var renderTimer = 0;
+  var renderToken = 0;
+
+  var defaults = { smoothness: 42, denoise: 34, sharpen: 32, clarity: 14, exposure: 0, shadows: 18, highlights: 16, contrast: 8, colorBalance: 35, warmth: 0 };
+  var presets = {
+    natural: defaults,
+    crisp: { smoothness: 24, denoise: 24, sharpen: 58, clarity: 30, exposure: 2, shadows: 12, highlights: 14, contrast: 14, colorBalance: 40, warmth: 2 },
+    soft: { smoothness: 68, denoise: 52, sharpen: 14, clarity: 5, exposure: 3, shadows: 24, highlights: 22, contrast: 3, colorBalance: 28, warmth: 4 }
+  };
+  var sliders = ['smoothness','denoise','sharpen','clarity','exposure','shadows','highlights','contrast','colorBalance','warmth'];
+  var batchSettings = Object.assign({}, defaults);
+
+  function setStatus(message, isError) {
+    status.textContent = message;
+    status.classList.toggle('error', !!isError);
+  }
+  function updateSlider(slider) {
+    var min = Number(slider.min), max = Number(slider.max), value = Number(slider.value);
+    slider.style.setProperty('--fill', ((value - min) / (max - min) * 100) + '%');
+    document.getElementById(slider.id + 'Out').value = value > 0 && min < 0 ? '+' + value : String(value);
+  }
+  function currentSettings() {
+    var result = {};
+    sliders.forEach(function (id) { result[id] = Number(document.getElementById(id).value); });
+    return result;
+  }
+  function copySettings(values) {
+    var result = {};
+    sliders.forEach(function (id) { result[id] = Number(values[id]); });
+    return result;
+  }
+  function settingsForPhoto(photo) {
+    return photo && photo.override ? photo.override : batchSettings;
+  }
+  function settingsForRegion(photo, region) {
+    if (!photo || region === 'whole') return settingsForPhoto(photo);
+    return photo.regionSettings && photo.regionSettings[region] ? photo.regionSettings[region] : settingsForPhoto(photo);
+  }
+  function ensureRegionSettings(photo, region) {
+    if (!photo || region === 'whole') return;
+    if (!photo.regionSettings) photo.regionSettings = { subject: null, background: null };
+    if (!photo.regionSettings[region]) photo.regionSettings[region] = copySettings(settingsForPhoto(photo));
+  }
+  function syncSettings(values) {
+    sliders.forEach(function (id) {
+      var control = document.getElementById(id);
+      control.value = values[id];
+      updateSlider(control);
+    });
+  }
+  function storeCurrentSettings() {
+    var values = currentSettings();
+    var photo = photos[activeIndex];
+    if (regionMode !== 'whole' && photo) {
+      ensureRegionSettings(photo, regionMode);
+      photo.regionSettings[regionMode] = values;
+    } else if (photos.length > 1 && photo && photo.override) photo.override = values;
+    else batchSettings = values;
+  }
+  function updatePresetState(values) {
+    document.querySelectorAll('.preset').forEach(function (button) {
+      var preset = presets[button.dataset.preset];
+      var matches = sliders.every(function (id) { return Number(values[id]) === Number(preset[id]); });
+      button.classList.toggle('active', matches);
+    });
+  }
+  function updateBatchScope() {
+    var photo = photos[activeIndex];
+    var overridden = !!(photo && photo.override);
+    batchScope.classList.toggle('active', photos.length > 1);
+    overrideBtn.disabled = regionMode !== 'whole';
+    overrideBtn.setAttribute('aria-pressed', overridden ? 'true' : 'false');
+    overrideBtn.textContent = overridden ? 'Use batch settings' : 'Override photo';
+    if (regionMode !== 'whole') {
+      scopeTitle.textContent = regionMode === 'subject' ? 'Front object edit' : 'Background edit';
+      scopeText.textContent = 'Regional adjustments are saved only for this photo.';
+    } else {
+      scopeTitle.textContent = overridden ? 'Photo override' : 'Batch settings';
+      scopeText.textContent = overridden ? 'Only this photo uses these adjustments.' : 'Applied to every photo without an override.';
+    }
+  }
+  function updateSelectionControls() {
+    var photo = photos[activeIndex];
+    var hasSelection = !!(photo && photo.selection);
+    document.querySelectorAll('.region-tab').forEach(function (button) {
+      button.setAttribute('aria-pressed', button.dataset.region === regionMode ? 'true' : 'false');
+    });
+    autoSelectBtn.disabled = !photo;
+    autoSelectBtn.textContent = hasSelection ? 'Update auto-selection' : 'Auto-select front object';
+    refineSelectionBtn.disabled = !hasSelection;
+    refineSelectionBtn.textContent = selectionEditing ? 'Editing…' : 'Update';
+    maskEditor.classList.toggle('active', selectionEditing);
+    selectionCanvas.classList.toggle('visible', regionMode !== 'whole' && hasSelection);
+    selectionCanvas.classList.toggle('editing', selectionEditing);
+    selectionBadge.classList.toggle('visible', selectionEditing);
+    compareRange.style.pointerEvents = selectionEditing ? 'none' : '';
+    selectionHelp.textContent = hasSelection
+      ? (selectionEditing ? 'Paint directly on the photo. Add restores the front object; Erase moves an area into the background.' : 'The front object is selected from the sharpest depth plane. Tap Update to correct the selection.')
+      : 'Auto-select estimates the in-focus front object from local sharpness. You can update the selection by painting or erasing.';
+    if (hasSelection && regionMode !== 'whole') renderSelectionOverlay();
+    else clearSelectionOverlay();
+  }
+  function updateTrayOverrideStates() {
+    photoTray.querySelectorAll('.photo-tile').forEach(function (tile, index) {
+      var overridden = !!(photos[index] && photos[index].override);
+      tile.classList.toggle('override', overridden);
+      tile.title = overridden ? 'This photo has custom adjustments' : '';
+      if (photos[index]) tile.setAttribute('aria-label', 'Preview photo ' + (index + 1) + ': ' + photos[index].file.name + (overridden ? ', custom adjustments' : ''));
+    });
+  }
+  function applySettings(values) {
+    syncSettings(values);
+    storeCurrentSettings();
+    updatePresetState(values);
+    updateTrayOverrideStates();
+    schedulePreview();
+  }
+  sliders.forEach(function (id) {
+    var slider = document.getElementById(id);
+    updateSlider(slider);
+    slider.addEventListener('input', function () {
+      updateSlider(slider);
+      document.querySelectorAll('.preset').forEach(function (b) { b.classList.remove('active'); });
+      storeCurrentSettings();
+      updateTrayOverrideStates();
+      schedulePreview();
+    });
+  });
+  document.querySelectorAll('.adjust-icon').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var id = button.dataset.control;
+      var panel = document.getElementById('panel-' + id);
+      var opening = button.getAttribute('aria-expanded') !== 'true';
+      document.querySelectorAll('.adjust-icon').forEach(function (item) { item.setAttribute('aria-expanded', 'false'); });
+      document.querySelectorAll('.adjust').forEach(function (item) { item.classList.remove('active'); });
+      if (opening) {
+        button.setAttribute('aria-expanded', 'true');
+        panel.classList.add('active');
+        window.requestAnimationFrame(function () { document.getElementById(id).focus({ preventScroll: true }); });
+      }
+    });
+  });
+  document.querySelectorAll('.preset').forEach(function (button) {
+    button.addEventListener('click', function () {
+      applySettings(presets[button.dataset.preset]);
+    });
+  });
+  resetBtn.addEventListener('click', function () {
+    var photo = photos[activeIndex];
+    applySettings(regionMode === 'whole' ? defaults : settingsForPhoto(photo));
+  });
+  overrideBtn.addEventListener('click', function () {
+    var photo = photos[activeIndex];
+    if (!photo || photos.length < 2 || regionMode !== 'whole') return;
+    if (photo.override) photo.override = null;
+    else photo.override = copySettings(batchSettings);
+    var values = settingsForPhoto(photo);
+    syncSettings(values);
+    updatePresetState(values);
+    updateBatchScope();
+    updateTrayOverrideStates();
+    schedulePreview();
+  });
+
+  document.querySelectorAll('.region-tab').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var nextMode = button.dataset.region;
+      if (nextMode === regionMode) return;
+      selectionEditing = false;
+      regionMode = nextMode;
+      var photo = photos[activeIndex];
+      if (photo && regionMode !== 'whole') {
+        ensureRegionSettings(photo, regionMode);
+        if (!photo.selection) {
+          syncSettings(settingsForRegion(photo, regionMode));
+          updatePresetState(settingsForRegion(photo, regionMode));
+          updateBatchScope();
+          updateSelectionControls();
+          autoSelectPhoto(photo);
+          return;
+        }
+      }
+      var values = settingsForRegion(photo, regionMode);
+      syncSettings(values);
+      updatePresetState(values);
+      updateBatchScope();
+      updateSelectionControls();
+      schedulePreview();
+    });
+  });
+
+  autoSelectBtn.addEventListener('click', function () {
+    var photo = photos[activeIndex];
+    if (!photo) return;
+    selectionEditing = false;
+    if (regionMode === 'whole') regionMode = 'subject';
+    ensureRegionSettings(photo, regionMode === 'background' ? 'background' : 'subject');
+    syncSettings(settingsForRegion(photo, regionMode));
+    updatePresetState(settingsForRegion(photo, regionMode));
+    updateBatchScope();
+    updateSelectionControls();
+    autoSelectPhoto(photo);
+  });
+
+  refineSelectionBtn.addEventListener('click', function () {
+    var photo = photos[activeIndex];
+    if (!photo || !photo.selection) return;
+    if (regionMode === 'whole') regionMode = 'subject';
+    selectionEditing = true;
+    updateBatchScope();
+    updateSelectionControls();
+  });
+
+  finishSelectionBtn.addEventListener('click', function () {
+    selectionEditing = false;
+    brushDown = false;
+    updateSelectionControls();
+    schedulePreview();
+  });
+
+  document.querySelectorAll('[data-brush]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      brushMode = button.dataset.brush;
+      document.querySelectorAll('[data-brush]').forEach(function (item) {
+        item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
+      });
+      selectionBadge.textContent = brushMode === 'add' ? 'Subject selection · paint to add' : 'Subject selection · paint to erase';
+    });
+  });
+
+  packaging.addEventListener('change', updateDownloadLabel);
+  if (!('showDirectoryPicker' in window)) {
+    chooseFolderBtn.disabled = true;
+    chooseFolderBtn.title = 'Folder selection is not supported by this browser';
+  }
+  chooseFolderBtn.addEventListener('click', function () {
+    window.showDirectoryPicker({ mode: 'readwrite' }).then(function (handle) {
+      directoryHandle = handle;
+      folderName.textContent = handle.name;
+      folderName.title = handle.name;
+      setStatus('Output folder selected: ' + handle.name);
+    }).catch(function (error) {
+      if (error && error.name !== 'AbortError') setStatus('This browser could not open a folder. Files will use Browser Downloads.', true);
+    });
+  });
+
+  function fitDimensions(w, h, maxEdge, allowUpscale) {
+    var scale = maxEdge / Math.max(w, h);
+    if (!allowUpscale) scale = Math.min(1, scale);
+    return { width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)) };
+  }
+
+  function blurScalar(src, w, h, radius) {
+    if (radius < 1) return new Float32Array(src);
+    var tmp = new Float32Array(src.length);
+    var out = new Float32Array(src.length);
+    var size = radius * 2 + 1;
+    var x, y, sum, add, sub;
+    for (y = 0; y < h; y++) {
+      sum = 0;
+      for (x = -radius; x <= radius; x++) sum += src[y * w + Math.max(0, Math.min(w - 1, x))];
+      for (x = 0; x < w; x++) {
+        tmp[y * w + x] = sum / size;
+        add = Math.min(w - 1, x + radius + 1);
+        sub = Math.max(0, x - radius);
+        sum += src[y * w + add] - src[y * w + sub];
+      }
+    }
+    for (x = 0; x < w; x++) {
+      sum = 0;
+      for (y = -radius; y <= radius; y++) sum += tmp[Math.max(0, Math.min(h - 1, y)) * w + x];
+      for (y = 0; y < h; y++) {
+        out[y * w + x] = sum / size;
+        add = Math.min(h - 1, y + radius + 1);
+        sub = Math.max(0, y - radius);
+        sum += tmp[add * w + x] - tmp[sub * w + x];
+      }
+    }
+    return out;
+  }
+
+  function buildSharpnessSelection(image) {
+    var dims = fitDimensions(image.naturalWidth, image.naturalHeight, 220, false);
+    var canvas = document.createElement('canvas');
+    var ctx = drawSource(canvas, dims.width, dims.height, image);
+    var pixels = ctx.getImageData(0, 0, dims.width, dims.height).data;
+    var gray = new Float32Array(dims.width * dims.height);
+    var energy = new Float32Array(gray.length);
+    var x, y, i;
+    for (i = 0; i < gray.length; i++) {
+      var p = i * 4;
+      gray[i] = pixels[p] * .299 + pixels[p + 1] * .587 + pixels[p + 2] * .114;
+    }
+    for (y = 1; y < dims.height - 1; y++) {
+      for (x = 1; x < dims.width - 1; x++) {
+        i = y * dims.width + x;
+        var gx = gray[i + 1] - gray[i - 1];
+        var gy = gray[i + dims.width] - gray[i - dims.width];
+        var lap = Math.abs(gray[i] * 4 - gray[i - 1] - gray[i + 1] - gray[i - dims.width] - gray[i + dims.width]);
+        energy[i] = Math.sqrt(gx * gx + gy * gy) + lap * 1.35;
+      }
+    }
+    var radius = Math.max(3, Math.round(Math.min(dims.width, dims.height) / 28));
+    var focus = blurScalar(energy, dims.width, dims.height, radius);
+    var scores = new Float32Array(focus.length);
+    var sample = [];
+    for (y = 0; y < dims.height; y++) {
+      var ny = (y / Math.max(1, dims.height - 1) - .5) * 2;
+      for (x = 0; x < dims.width; x++) {
+        i = y * dims.width + x;
+        var nx = (x / Math.max(1, dims.width - 1) - .5) * 2;
+        var center = Math.max(0, 1 - Math.sqrt(nx * nx + ny * ny));
+        var border = Math.min(x, y, dims.width - 1 - x, dims.height - 1 - y) / Math.max(1, Math.min(dims.width, dims.height) * .16);
+        scores[i] = focus[i] * (.82 + center * .42) * (.82 + Math.min(1, border) * .18);
+        if ((x + y * dims.width) % 3 === 0) sample.push(scores[i]);
+      }
+    }
+    sample.sort(function (a, b) { return a - b; });
+    var low = sample[Math.floor(sample.length * .54)] || 0;
+    var high = sample[Math.floor(sample.length * .82)] || (low + 1);
+    if (high <= low) high = low + 1;
+    var rough = new Float32Array(scores.length);
+    for (i = 0; i < scores.length; i++) {
+      var t = Math.max(0, Math.min(1, (scores[i] - low) / (high - low)));
+      rough[i] = t * t * (3 - 2 * t);
+    }
+    var softened = blurScalar(rough, dims.width, dims.height, Math.max(2, Math.round(radius * .8)));
+    var mask = new Uint8ClampedArray(softened.length);
+    for (i = 0; i < softened.length; i++) {
+      var value = Math.max(0, Math.min(1, (softened[i] - .12) / .64));
+      mask[i] = Math.round(value * value * (3 - 2 * value) * 255);
+    }
+    canvas.width = 1;
+    canvas.height = 1;
+    return { width: dims.width, height: dims.height, data: mask };
+  }
+
+  function autoSelectPhoto(photo) {
+    if (!photo) return;
+    processingText.textContent = photo.selection ? 'Updating selection…' : 'Finding the sharpest subject…';
+    processing.classList.add('active');
+    setStatus('Analyzing local sharpness to estimate the front object…');
+    setTimeout(function () {
+      try {
+        photo.selection = buildSharpnessSelection(photo.image);
+        if (photos[activeIndex] === photo) {
+          processing.classList.remove('active');
+          updateSelectionControls();
+          schedulePreview();
+          setStatus('Front object selected · tap Update to add or erase areas');
+        }
+      } catch (error) {
+        processing.classList.remove('active');
+        setStatus('The front object could not be selected on this photo. Try a smaller image.', true);
+      }
+    }, 30);
+  }
+
+  function clearSelectionOverlay() {
+    var ctx = selectionCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+  }
+
+  function renderSelectionOverlay() {
+    var photo = photos[activeIndex];
+    if (!photo || !photo.selection || !beforeCanvas.width || regionMode === 'whole') return;
+    var mask = photo.selection;
+    selectionCanvas.width = beforeCanvas.width;
+    selectionCanvas.height = beforeCanvas.height;
+    var small = document.createElement('canvas');
+    small.width = mask.width;
+    small.height = mask.height;
+    var smallCtx = small.getContext('2d');
+    var overlay = smallCtx.createImageData(mask.width, mask.height);
+    var showBackground = regionMode === 'background' && !selectionEditing;
+    for (var i = 0; i < mask.data.length; i++) {
+      var alpha = showBackground ? 255 - mask.data[i] : mask.data[i];
+      var p = i * 4;
+      overlay.data[p] = showBackground ? 229 : 38;
+      overlay.data[p + 1] = showBackground ? 113 : 187;
+      overlay.data[p + 2] = showBackground ? 76 : 128;
+      overlay.data[p + 3] = Math.round(alpha * (selectionEditing ? .48 : .3));
+    }
+    smallCtx.putImageData(overlay, 0, 0);
+    var ctx = selectionCanvas.getContext('2d');
+    ctx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(small, 0, 0, selectionCanvas.width, selectionCanvas.height);
+  }
+
+  function paintSelection(event) {
+    var photo = photos[activeIndex];
+    if (!selectionEditing || !photo || !photo.selection) return;
+    var rect = selectionCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    var mask = photo.selection;
+    var cx = (event.clientX - rect.left) / rect.width * mask.width;
+    var cy = (event.clientY - rect.top) / rect.height * mask.height;
+    var radius = Math.max(5, Math.min(mask.width, mask.height) * .075);
+    var minX = Math.max(0, Math.floor(cx - radius));
+    var maxX = Math.min(mask.width - 1, Math.ceil(cx + radius));
+    var minY = Math.max(0, Math.floor(cy - radius));
+    var maxY = Math.min(mask.height - 1, Math.ceil(cy + radius));
+    for (var y = minY; y <= maxY; y++) {
+      for (var x = minX; x <= maxX; x++) {
+        var distance = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy));
+        if (distance > radius) continue;
+        var strength = Math.max(0, Math.min(1, (radius - distance) / Math.max(1, radius * .35)));
+        var index = y * mask.width + x;
+        if (brushMode === 'add') mask.data[index] = Math.max(mask.data[index], Math.round(255 * strength));
+        else mask.data[index] = Math.min(mask.data[index], Math.round(255 * (1 - strength)));
+      }
+    }
+    renderSelectionOverlay();
+    schedulePreview();
+  }
+
+  selectionCanvas.addEventListener('pointerdown', function (event) {
+    if (!selectionEditing) return;
+    brushDown = true;
+    selectionCanvas.setPointerCapture(event.pointerId);
+    paintSelection(event);
+  });
+  selectionCanvas.addEventListener('pointermove', function (event) {
+    if (brushDown) paintSelection(event);
+  });
+  selectionCanvas.addEventListener('pointerup', function (event) {
+    brushDown = false;
+    if (selectionCanvas.hasPointerCapture(event.pointerId)) selectionCanvas.releasePointerCapture(event.pointerId);
+  });
+  selectionCanvas.addEventListener('pointercancel', function () { brushDown = false; });
+
+  function boxBlur(src, w, h, radius) {
+    if (radius < 1) return new Uint8ClampedArray(src);
+    var tmp = new Uint8ClampedArray(src.length);
+    var out = new Uint8ClampedArray(src.length);
+    var windowSize = radius * 2 + 1;
+    var x, y, c, idx, add, sub, sum;
+    for (y = 0; y < h; y++) {
+      for (c = 0; c < 3; c++) {
+        sum = 0;
+        for (x = -radius; x <= radius; x++) sum += src[(y * w + Math.max(0, Math.min(w - 1, x))) * 4 + c];
+        for (x = 0; x < w; x++) {
+          idx = (y * w + x) * 4;
+          tmp[idx + c] = sum / windowSize;
+          add = Math.min(w - 1, x + radius + 1);
+          sub = Math.max(0, x - radius);
+          sum += src[(y * w + add) * 4 + c] - src[(y * w + sub) * 4 + c];
+        }
+      }
+      for (x = 0; x < w; x++) tmp[(y * w + x) * 4 + 3] = src[(y * w + x) * 4 + 3];
+    }
+    for (x = 0; x < w; x++) {
+      for (c = 0; c < 3; c++) {
+        sum = 0;
+        for (y = -radius; y <= radius; y++) sum += tmp[(Math.max(0, Math.min(h - 1, y)) * w + x) * 4 + c];
+        for (y = 0; y < h; y++) {
+          idx = (y * w + x) * 4;
+          out[idx + c] = sum / windowSize;
+          add = Math.min(h - 1, y + radius + 1);
+          sub = Math.max(0, y - radius);
+          sum += tmp[(add * w + x) * 4 + c] - tmp[(sub * w + x) * 4 + c];
+        }
+      }
+      for (y = 0; y < h; y++) out[(y * w + x) * 4 + 3] = src[(y * w + x) * 4 + 3];
+    }
+    return out;
+  }
+
+  function balanceColorChannels(data, w, h, strength) {
+    if (strength <= 0) return;
+    var pixelCount = w * h;
+    var step = Math.max(1, Math.floor(pixelCount / 120000));
+    var sums = [0, 0, 0];
+    var totalWeight = 0;
+    for (var pixel = 0; pixel < pixelCount; pixel += step) {
+      var offset = pixel * 4;
+      var r = data[offset], g = data[offset + 1], b = data[offset + 2];
+      var high = Math.max(r, g, b), low = Math.min(r, g, b);
+      var luma = r * .299 + g * .587 + b * .114;
+      var chroma = high - low;
+      if (luma < 24 || luma > 235 || chroma > 105) continue;
+      var weight = Math.max(.16, 1 - chroma / 120);
+      sums[0] += r * weight;
+      sums[1] += g * weight;
+      sums[2] += b * weight;
+      totalWeight += weight;
+    }
+    if (totalWeight < 50) return;
+    var averages = [sums[0] / totalWeight, sums[1] / totalWeight, sums[2] / totalWeight];
+    var target = (averages[0] + averages[1] + averages[2]) / 3;
+    var blend = strength / 100;
+    var gains = averages.map(function (average) {
+      var correction = Math.max(.84, Math.min(1.16, target / Math.max(1, average)));
+      return 1 + (correction - 1) * blend;
+    });
+    for (var i = 0; i < data.length; i += 4) {
+      var pixelLuma = data[i] * .299 + data[i + 1] * .587 + data[i + 2] * .114;
+      var highlightProtection = pixelLuma > 225 ? Math.max(0, (255 - pixelLuma) / 30) : 1;
+      data[i] *= 1 + (gains[0] - 1) * highlightProtection;
+      data[i + 1] *= 1 + (gains[1] - 1) * highlightProtection;
+      data[i + 2] *= 1 + (gains[2] - 1) * highlightProtection;
+    }
+  }
+
+  function enhance(imageData, settings) {
+    var data = imageData.data;
+    var w = imageData.width, h = imageData.height;
+    var denoiseAmount = settings.denoise / 100 * .68;
+    if (denoiseAmount > 0) {
+      var smooth = boxBlur(data, w, h, settings.denoise > 72 ? 3 : settings.denoise > 38 ? 2 : 1);
+      for (var i = 0; i < data.length; i += 4) {
+        data[i] += (smooth[i] - data[i]) * denoiseAmount;
+        data[i+1] += (smooth[i+1] - data[i+1]) * denoiseAmount;
+        data[i+2] += (smooth[i+2] - data[i+2]) * denoiseAmount;
+      }
+      smooth = null;
+    }
+    var smoothingAmount = settings.smoothness / 100;
+    if (smoothingAmount > 0) {
+      var smoothingRadius = settings.smoothness > 75 ? 4 : settings.smoothness > 42 ? 3 : 2;
+      var polished = boxBlur(data, w, h, smoothingRadius);
+      var edgeThreshold = 11 + settings.smoothness * .24;
+      for (var s = 0; s < data.length; s += 4) {
+        var originalLuma = data[s] * .299 + data[s+1] * .587 + data[s+2] * .114;
+        var smoothLuma = polished[s] * .299 + polished[s+1] * .587 + polished[s+2] * .114;
+        var edgeDelta = Math.abs(originalLuma - smoothLuma);
+        var edgeProtection = Math.max(.12, 1 - edgeDelta / edgeThreshold);
+        var blend = smoothingAmount * .86 * edgeProtection;
+        data[s] += (polished[s] - data[s]) * blend;
+        data[s+1] += (polished[s+1] - data[s+1]) * blend;
+        data[s+2] += (polished[s+2] - data[s+2]) * blend;
+      }
+      polished = null;
+    }
+    balanceColorChannels(data, w, h, settings.colorBalance);
+    var exposure = Math.pow(2, settings.exposure / 100);
+    var contrast = 1 + settings.contrast / 100;
+    var warmth = settings.warmth / 50 * 9;
+    var shadowStrength = settings.shadows / 100;
+    var highlightStrength = settings.highlights / 100;
+    for (var p = 0; p < data.length; p += 4) {
+      var r = data[p] * exposure + warmth;
+      var g = data[p+1] * exposure + warmth * .12;
+      var b = data[p+2] * exposure - warmth;
+      var luma = Math.max(0, Math.min(1, (r * .299 + g * .587 + b * .114) / 255));
+      var shadowMask = Math.pow(Math.max(0, (.62 - luma) / .62), 1.7);
+      var highlightMask = Math.pow(Math.max(0, (luma - .38) / .62), 1.7);
+      var toneRecovery = shadowStrength * 52 * shadowMask - highlightStrength * 52 * highlightMask;
+      r += toneRecovery;
+      g += toneRecovery;
+      b += toneRecovery;
+      r = (r - 128) * contrast + 128;
+      g = (g - 128) * contrast + 128;
+      b = (b - 128) * contrast + 128;
+      data[p] = r;
+      data[p+1] = g;
+      data[p+2] = b;
+    }
+    if (settings.clarity > 0) {
+      var radius = Math.max(2, Math.min(7, Math.round(Math.min(w,h) / 230)));
+      var local = boxBlur(data, w, h, radius);
+      var clarityAmount = settings.clarity / 100 * .72 * (1 - smoothingAmount * .35);
+      for (p = 0; p < data.length; p += 4) {
+        data[p] += (data[p] - local[p]) * clarityAmount;
+        data[p+1] += (data[p+1] - local[p+1]) * clarityAmount;
+        data[p+2] += (data[p+2] - local[p+2]) * clarityAmount;
+      }
+      local = null;
+    }
+    if (settings.sharpen > 0) {
+      var soft = boxBlur(data, w, h, 1);
+      var sharpAmount = settings.sharpen / 100 * 1.28 * (1 - smoothingAmount * .48);
+      for (p = 0; p < data.length; p += 4) {
+        data[p] += (data[p] - soft[p]) * sharpAmount;
+        data[p+1] += (data[p+1] - soft[p+1]) * sharpAmount;
+        data[p+2] += (data[p+2] - soft[p+2]) * sharpAmount;
+      }
+    }
+    return imageData;
+  }
+
+  function enhanceWithRegions(imageData, photo) {
+    var width = imageData.width;
+    var height = imageData.height;
+    var raw = new Uint8ClampedArray(imageData.data);
+    var base = enhance(new ImageData(new Uint8ClampedArray(raw), width, height), settingsForPhoto(photo));
+    if (!photo || !photo.selection || !photo.regionSettings || (!photo.regionSettings.subject && !photo.regionSettings.background)) return base;
+    var subject = photo.regionSettings.subject
+      ? enhance(new ImageData(new Uint8ClampedArray(raw), width, height), photo.regionSettings.subject)
+      : base;
+    var background = photo.regionSettings.background
+      ? enhance(new ImageData(new Uint8ClampedArray(raw), width, height), photo.regionSettings.background)
+      : base;
+    var mask = photo.selection;
+    var out = new ImageData(width, height);
+    for (var y = 0; y < height; y++) {
+      var my = Math.min(mask.height - 1, Math.floor(y / height * mask.height));
+      for (var x = 0; x < width; x++) {
+        var mx = Math.min(mask.width - 1, Math.floor(x / width * mask.width));
+        var mix = mask.data[my * mask.width + mx] / 255;
+        var p = (y * width + x) * 4;
+        out.data[p] = background.data[p] + (subject.data[p] - background.data[p]) * mix;
+        out.data[p + 1] = background.data[p + 1] + (subject.data[p + 1] - background.data[p + 1]) * mix;
+        out.data[p + 2] = background.data[p + 2] + (subject.data[p + 2] - background.data[p + 2]) * mix;
+        out.data[p + 3] = base.data[p + 3];
+      }
+    }
+    return out;
+  }
+
+  function drawSource(canvas, width, height, image) {
+    canvas.width = width; canvas.height = height;
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image || sourceImage, 0, 0, width, height);
+    return ctx;
+  }
+
+  function renderPreview() {
+    if (!sourceImage) return;
+    var token = ++renderToken;
+    processingText.textContent = 'Refining preview…';
+    processing.classList.add('active');
+    setTimeout(function () {
+      if (token !== renderToken) return;
+      try {
+        var dims = fitDimensions(sourceImage.naturalWidth, sourceImage.naturalHeight, 1400, false);
+        var beforeCtx = drawSource(beforeCanvas, dims.width, dims.height);
+        afterCanvas.width = dims.width; afterCanvas.height = dims.height;
+        var afterCtx = afterCanvas.getContext('2d', { willReadFrequently: true });
+        var photo = photos[activeIndex];
+        var original = beforeCtx.getImageData(0, 0, dims.width, dims.height);
+        afterCtx.putImageData(enhanceWithRegions(original, photo), 0, 0);
+        imageStage.style.setProperty('--ratio', dims.width + '/' + dims.height);
+        renderSelectionOverlay();
+        processing.classList.remove('active');
+        setStatus('Preview ready · drag the divider to compare');
+      } catch (error) {
+        processing.classList.remove('active');
+        setStatus('This photo is too large to preview on this device. Try a smaller copy.', true);
+      }
+    }, 30);
+  }
+  function schedulePreview() {
+    if (!sourceImage) return;
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(renderPreview, 140);
+  }
+
+  function releasePhotos() {
+    photos.forEach(function (photo) { URL.revokeObjectURL(photo.url); });
+    photos = [];
+  }
+
+  function showPhoto(index) {
+    if (!photos[index]) return;
+    activeIndex = index;
+    var photo = photos[index];
+    sourceImage = photo.image;
+    sourceName = photo.name;
+    document.getElementById('fileName').textContent = photo.file.name;
+    document.getElementById('fileDetails').textContent = 'Photo ' + (index + 1) + ' of ' + photos.length + ' · ' + photo.image.naturalWidth + ' × ' + photo.image.naturalHeight + ' px · ' + (photo.file.size / 1024 / 1024).toFixed(1) + ' MB';
+    photoTray.querySelectorAll('.photo-tile').forEach(function (tile, tileIndex) {
+      tile.classList.toggle('active', tileIndex === index);
+      tile.setAttribute('aria-pressed', tileIndex === index ? 'true' : 'false');
+    });
+    selectionEditing = false;
+    var values = settingsForRegion(photo, regionMode);
+    syncSettings(values);
+    updatePresetState(values);
+    updateBatchScope();
+    updateSelectionControls();
+    updateTrayOverrideStates();
+    if (regionMode !== 'whole' && !photo.selection) {
+      ensureRegionSettings(photo, regionMode);
+      autoSelectPhoto(photo);
+    } else {
+      setStatus(regionMode !== 'whole' ? 'Preparing regional preview…' : (photo.override ? 'Preparing preview with this photo’s override…' : 'Preparing preview with batch settings…'));
+      renderPreview();
+    }
+  }
+
+  function renderPhotoTray() {
+    photoTray.innerHTML = '';
+    photoTray.classList.toggle('active', photos.length > 1);
+    photos.forEach(function (photo, index) {
+      var tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'photo-tile' + (index === activeIndex ? ' active' : '') + (photo.override ? ' override' : '');
+      tile.setAttribute('aria-pressed', index === activeIndex ? 'true' : 'false');
+      tile.setAttribute('aria-label', 'Preview photo ' + (index + 1) + ': ' + photo.file.name + (photo.override ? ', custom adjustments' : ''));
+      var thumb = document.createElement('img');
+      thumb.src = photo.url;
+      thumb.alt = '';
+      var name = document.createElement('span');
+      name.textContent = (index + 1) + '. ' + photo.file.name;
+      tile.appendChild(thumb);
+      tile.appendChild(name);
+      tile.addEventListener('click', function () { showPhoto(index); });
+      photoTray.appendChild(tile);
+    });
+  }
+
+  function updateDownloadLabel() {
+    if (!photos.length) {
+      downloadLabel.textContent = 'Save photos';
+    } else if (packaging.value === 'zip') {
+      downloadLabel.textContent = 'Save ' + photos.length + (photos.length === 1 ? ' photo as ZIP' : ' photos as ZIP');
+    } else {
+      downloadLabel.textContent = 'Save ' + photos.length + (photos.length === 1 ? ' photo' : ' photos');
+    }
+  }
+
+  function loadFiles(fileList) {
+    var originalCount = fileList ? fileList.length : 0;
+    var candidates = Array.prototype.slice.call(fileList || [], 0, 50);
+    var valid = candidates.filter(function (file) {
+      return /^image\/(jpeg|png|webp)$/.test(file.type) && file.size <= 45 * 1024 * 1024;
+    });
+    if (!valid.length) {
+      setStatus('Choose JPEG, PNG, or WebP photos under 45 MB each.', true);
+      return;
+    }
+    setStatus('Opening ' + valid.length + (valid.length === 1 ? ' photo…' : ' photos…'));
+    var loaded = new Array(valid.length);
+    var complete = 0;
+    valid.forEach(function (file, index) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        loaded[index] = { file: file, image: img, url: url, name: file.name.replace(/\.[^.]+$/, '') || ('photo-' + (index + 1)), override: null, regionSettings: { subject: null, background: null }, selection: null };
+        finishOne();
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        loaded[index] = null;
+        finishOne();
+      };
+      img.src = url;
+    });
+    function finishOne() {
+      complete++;
+      if (complete !== valid.length) return;
+      var ready = loaded.filter(Boolean);
+      if (!ready.length) {
+        setStatus('The selected photos could not be opened. Try exporting them as JPEG first.', true);
+        return;
+      }
+      releasePhotos();
+      photos = ready;
+      activeIndex = 0;
+      emptyState.style.display = 'none';
+      editor.classList.add('active');
+      downloadBtn.disabled = false;
+      resetBtn.disabled = false;
+      renderPhotoTray();
+      updateDownloadLabel();
+      showPhoto(0);
+      if (originalCount > 50) setStatus('Loaded the first 50 photos. The batch limit is 50 to protect this device from running out of memory.');
+    }
+  }
+  input.addEventListener('change', function () { if (input.files && input.files.length) loadFiles(input.files); input.value = ''; });
+  changeInput.addEventListener('change', function () { if (changeInput.files && changeInput.files.length) loadFiles(changeInput.files); changeInput.value = ''; });
+  ['dragenter','dragover'].forEach(function (eventName) {
+    document.addEventListener(eventName, function (e) { e.preventDefault(); dropCard.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(function (eventName) {
+    document.addEventListener(eventName, function (e) { e.preventDefault(); dropCard.classList.remove('drag'); });
+  });
+  document.addEventListener('drop', function (e) { if (e.dataTransfer.files && e.dataTransfer.files.length) loadFiles(e.dataTransfer.files); });
+
+  compareRange.addEventListener('input', function () {
+    var value = Number(compareRange.value);
+    afterClip.style.width = value + '%';
+    afterClip.style.setProperty('--clip', Math.max(.001, value / 100));
+    compareLine.style.left = value + '%';
+    compareKnob.style.left = value + '%';
+  });
+
+  function exportDimensions(image) {
+    var choice = resolution.value;
+    var dims = choice === 'original'
+      ? { width: image.naturalWidth, height: image.naturalHeight }
+      : fitDimensions(image.naturalWidth, image.naturalHeight, Number(choice), true);
+    var maxPixels = 14000000;
+    if (dims.width * dims.height > maxPixels) {
+      var safeScale = Math.sqrt(maxPixels / (dims.width * dims.height));
+      dims.width = Math.round(dims.width * safeScale);
+      dims.height = Math.round(dims.height * safeScale);
+    }
+    return dims;
+  }
+
+  function patchExifPayload(payload, width, height) {
+    var copy = new Uint8Array(payload);
+    var start = 0;
+    if (copy.length >= 6 && copy[0] === 69 && copy[1] === 120 && copy[2] === 105 && copy[3] === 102 && copy[4] === 0 && copy[5] === 0) start = 6;
+    if (copy.length < start + 8) return copy;
+    var view = new DataView(copy.buffer, copy.byteOffset, copy.byteLength);
+    var order = view.getUint16(start, false);
+    var little;
+    if (order === 0x4949) little = true;
+    else if (order === 0x4d4d) little = false;
+    else return copy;
+    if (view.getUint16(start + 2, little) !== 42) return copy;
+    var visited = {};
+    function writeValue(entry, type, count, value) {
+      if (count !== 1) return;
+      if (type === 3 && value <= 65535) view.setUint16(entry + 8, value, little);
+      else if (type === 4) view.setUint32(entry + 8, value, little);
+    }
+    function updateIfd(relativeOffset, isExif) {
+      if (!relativeOffset || visited[relativeOffset]) return;
+      visited[relativeOffset] = true;
+      var offset = start + relativeOffset;
+      if (offset < start || offset + 2 > copy.length) return;
+      var count = view.getUint16(offset, little);
+      if (count > 512 || offset + 2 + count * 12 > copy.length) return;
+      var exifOffset = 0;
+      for (var i = 0; i < count; i++) {
+        var entry = offset + 2 + i * 12;
+        var tag = view.getUint16(entry, little);
+        var type = view.getUint16(entry + 2, little);
+        var itemCount = view.getUint32(entry + 4, little);
+        if (!isExif && tag === 0x0112) writeValue(entry, type, itemCount, 1);
+        if (!isExif && tag === 0x0100) writeValue(entry, type, itemCount, width);
+        if (!isExif && tag === 0x0101) writeValue(entry, type, itemCount, height);
+        if (isExif && tag === 0xa002) writeValue(entry, type, itemCount, width);
+        if (isExif && tag === 0xa003) writeValue(entry, type, itemCount, height);
+        if (!isExif && tag === 0x8769 && itemCount === 1) exifOffset = view.getUint32(entry + 8, little);
+      }
+      if (exifOffset) updateIfd(exifOffset, true);
+    }
+    try { updateIfd(view.getUint32(start + 4, little), false); } catch (error) { return new Uint8Array(payload); }
+    return copy;
+  }
+
+  function readJpegHeader(bytes) {
+    if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+    var segments = [];
+    var pos = 2;
+    var scanStart = bytes.length;
+    while (pos + 1 < bytes.length) {
+      var start = pos;
+      if (bytes[pos] !== 0xff) break;
+      while (pos < bytes.length && bytes[pos] === 0xff) pos++;
+      if (pos >= bytes.length) break;
+      var marker = bytes[pos++];
+      if (marker === 0xda || marker === 0xd9) { scanStart = start; break; }
+      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+        segments.push({ marker: marker, start: start, end: pos });
+        continue;
+      }
+      if (pos + 1 >= bytes.length) return null;
+      var length = (bytes[pos] << 8) | bytes[pos + 1];
+      if (length < 2 || pos + length > bytes.length) return null;
+      segments.push({ marker: marker, start: start, end: pos + length });
+      pos += length;
+    }
+    return { segments: segments, scanStart: scanStart };
+  }
+
+  function isJpegMetadataMarker(marker) {
+    return marker === 0xe0 || marker === 0xe1 || marker === 0xe2 || marker === 0xed || marker === 0xef || marker === 0xfe;
+  }
+
+  function preserveJpegMetadata(source, output, dims) {
+    var sourceHeader = readJpegHeader(source);
+    var outputHeader = readJpegHeader(output);
+    if (!sourceHeader || !outputHeader) return null;
+    var kept = [];
+    sourceHeader.segments.forEach(function (segment) {
+      if (!isJpegMetadataMarker(segment.marker)) return;
+      var bytes = source.slice(segment.start, segment.end);
+      if (segment.marker === 0xe1 && bytes.length > 10 && bytes[4] === 69 && bytes[5] === 120 && bytes[6] === 105 && bytes[7] === 102) {
+        var patched = patchExifPayload(bytes.slice(4), dims.width, dims.height);
+        var rebuilt = new Uint8Array(bytes.length);
+        rebuilt.set(bytes.slice(0, 4), 0);
+        rebuilt.set(patched, 4);
+        bytes = rebuilt;
+      }
+      kept.push(bytes);
+    });
+    if (!kept.length) return null;
+    var parts = [output.slice(0, 2)].concat(kept);
+    outputHeader.segments.forEach(function (segment) {
+      if (!isJpegMetadataMarker(segment.marker)) parts.push(output.slice(segment.start, segment.end));
+    });
+    parts.push(output.slice(outputHeader.scanStart));
+    return new Blob(parts, { type: 'image/jpeg' });
+  }
+
+  function readPngChunks(bytes) {
+    var signature = [137,80,78,71,13,10,26,10];
+    if (bytes.length < 20) return null;
+    for (var s = 0; s < signature.length; s++) if (bytes[s] !== signature[s]) return null;
+    var chunks = [];
+    var pos = 8;
+    var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    while (pos + 12 <= bytes.length) {
+      var length = view.getUint32(pos, false);
+      var end = pos + 12 + length;
+      if (end > bytes.length) return null;
+      var type = String.fromCharCode(bytes[pos+4], bytes[pos+5], bytes[pos+6], bytes[pos+7]);
+      chunks.push({ type: type, start: pos, end: end, dataStart: pos + 8, dataEnd: pos + 8 + length });
+      pos = end;
+      if (type === 'IEND') break;
+    }
+    return chunks;
+  }
+
+  function makePngChunk(type, data) {
+    var chunk = new Uint8Array(12 + data.length);
+    var view = new DataView(chunk.buffer);
+    view.setUint32(0, data.length, false);
+    for (var i = 0; i < 4; i++) chunk[4 + i] = type.charCodeAt(i);
+    chunk.set(data, 8);
+    view.setUint32(8 + data.length, crc32(chunk.subarray(4, 8 + data.length)), false);
+    return chunk;
+  }
+
+  function preservePngMetadata(source, output, dims) {
+    var sourceChunks = readPngChunks(source);
+    var outputChunks = readPngChunks(output);
+    if (!sourceChunks || !outputChunks) return null;
+    var metadataTypes = { eXIf: true, iTXt: true, tEXt: true, zTXt: true, pHYs: true, tIME: true };
+    var kept = [];
+    sourceChunks.forEach(function (chunk) {
+      if (!metadataTypes[chunk.type]) return;
+      if (chunk.type === 'eXIf') {
+        kept.push(makePngChunk('eXIf', patchExifPayload(source.slice(chunk.dataStart, chunk.dataEnd), dims.width, dims.height)));
+      } else {
+        kept.push(source.slice(chunk.start, chunk.end));
+      }
+    });
+    if (!kept.length) return null;
+    var parts = [output.slice(0, 8)];
+    outputChunks.forEach(function (chunk) {
+      if (metadataTypes[chunk.type]) return;
+      parts.push(output.slice(chunk.start, chunk.end));
+      if (chunk.type === 'IHDR') Array.prototype.push.apply(parts, kept);
+    });
+    return new Blob(parts, { type: 'image/png' });
+  }
+
+  function readWebpChunks(bytes) {
+    if (bytes.length < 12 || String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3]) !== 'RIFF' || String.fromCharCode(bytes[8],bytes[9],bytes[10],bytes[11]) !== 'WEBP') return null;
+    var chunks = [];
+    var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    var pos = 12;
+    while (pos + 8 <= bytes.length) {
+      var type = String.fromCharCode(bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3]);
+      var length = view.getUint32(pos + 4, true);
+      var end = pos + 8 + length + (length & 1);
+      if (end > bytes.length) return null;
+      chunks.push({ type: type, start: pos, end: end, dataStart: pos + 8, dataEnd: pos + 8 + length });
+      pos = end;
+    }
+    return chunks;
+  }
+
+  function makeWebpChunk(type, data) {
+    var chunk = new Uint8Array(8 + data.length + (data.length & 1));
+    var view = new DataView(chunk.buffer);
+    for (var i = 0; i < 4; i++) chunk[i] = type.charCodeAt(i);
+    view.setUint32(4, data.length, true);
+    chunk.set(data, 8);
+    return chunk;
+  }
+
+  function write24(view, offset, value) {
+    view.setUint8(offset, value & 255);
+    view.setUint8(offset + 1, (value >>> 8) & 255);
+    view.setUint8(offset + 2, (value >>> 16) & 255);
+  }
+
+  function preserveWebpMetadata(source, output, dims) {
+    var sourceChunks = readWebpChunks(source);
+    var outputChunks = readWebpChunks(output);
+    if (!sourceChunks || !outputChunks) return null;
+    var kept = [];
+    var flags = 0;
+    sourceChunks.forEach(function (chunk) {
+      if (chunk.type === 'EXIF') {
+        kept.push(makeWebpChunk('EXIF', patchExifPayload(source.slice(chunk.dataStart, chunk.dataEnd), dims.width, dims.height)));
+        flags |= 0x08;
+      } else if (chunk.type === 'XMP ') {
+        kept.push(source.slice(chunk.start, chunk.end));
+        flags |= 0x04;
+      }
+    });
+    if (!kept.length) return null;
+    var hasAlpha = outputChunks.some(function (chunk) {
+      if (chunk.type === 'ALPH') return true;
+      if (chunk.type === 'VP8L' && chunk.dataEnd - chunk.dataStart >= 5) {
+        var data = output.slice(chunk.dataStart, chunk.dataEnd);
+        var packed = (data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24)) >>> 0;
+        return !!((packed >>> 28) & 1);
+      }
+      return false;
+    });
+    if (hasAlpha) flags |= 0x10;
+    var vp8xData = new Uint8Array(10);
+    var existingVp8x = outputChunks.filter(function (chunk) { return chunk.type === 'VP8X'; })[0];
+    if (existingVp8x && existingVp8x.dataEnd - existingVp8x.dataStart >= 10) vp8xData.set(output.slice(existingVp8x.dataStart, existingVp8x.dataStart + 10));
+    vp8xData[0] |= flags;
+    var vp8xView = new DataView(vp8xData.buffer);
+    write24(vp8xView, 4, dims.width - 1);
+    write24(vp8xView, 7, dims.height - 1);
+    var chunks = [makeWebpChunk('VP8X', vp8xData)];
+    outputChunks.forEach(function (chunk) {
+      if (chunk.type !== 'VP8X' && chunk.type !== 'EXIF' && chunk.type !== 'XMP ') chunks.push(output.slice(chunk.start, chunk.end));
+    });
+    Array.prototype.push.apply(chunks, kept);
+    var total = 4;
+    chunks.forEach(function (chunk) { total += chunk.length; });
+    var header = new Uint8Array(12);
+    header.set([82,73,70,70], 0);
+    new DataView(header.buffer).setUint32(4, total, true);
+    header.set([87,69,66,80], 8);
+    return new Blob([header].concat(chunks), { type: 'image/webp' });
+  }
+
+  function preserveEmbeddedMetadata(sourceFile, outputBlob, dims) {
+    return Promise.all([sourceFile.arrayBuffer(), outputBlob.arrayBuffer()]).then(function (buffers) {
+      var source = new Uint8Array(buffers[0]);
+      var output = new Uint8Array(buffers[1]);
+      var result = null;
+      if (sourceFile.type === 'image/jpeg') result = preserveJpegMetadata(source, output, dims);
+      else if (sourceFile.type === 'image/png') result = preservePngMetadata(source, output, dims);
+      else if (sourceFile.type === 'image/webp') result = preserveWebpMetadata(source, output, dims);
+      return { blob: result || outputBlob, preserved: !!result };
+    }).catch(function () {
+      return { blob: outputBlob, preserved: false };
+    });
+  }
+
+  function buildEnhancedBlob(photo, settings, shouldPreserveMetadata, done) {
+    setTimeout(function () {
+      try {
+        var dims = exportDimensions(photo.image);
+        var canvas = document.createElement('canvas');
+        var ctx = drawSource(canvas, dims.width, dims.height, photo.image);
+        var pixels = ctx.getImageData(0, 0, dims.width, dims.height);
+        ctx.putImageData(enhanceWithRegions(pixels, photo), 0, 0);
+        var outputType = /^(image\/jpeg|image\/png|image\/webp)$/.test(photo.file.type) ? photo.file.type : 'image/jpeg';
+        canvas.toBlob(function (blob) {
+          canvas.width = 1;
+          canvas.height = 1;
+          if (!blob) {
+            done(new Error('blob'));
+            return;
+          }
+          if (!shouldPreserveMetadata) {
+            done(null, blob, dims, false);
+            return;
+          }
+          preserveEmbeddedMetadata(photo.file, blob, dims).then(function (result) {
+            done(null, result.blob, dims, result.preserved);
+          });
+        }, outputType, outputType === 'image/png' ? undefined : .95);
+      } catch (error) {
+        done(error);
+      }
+    }, 35);
+  }
+
+  var crcTable = null;
+  function crc32(bytes) {
+    if (!crcTable) {
+      crcTable = [];
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTable[n] = c >>> 0;
+      }
+    }
+    var crc = 0xffffffff;
+    for (var i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 255] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+  function put16(view, offset, value) { view.setUint16(offset, value, true); }
+  function put32(view, offset, value) { view.setUint32(offset, value >>> 0, true); }
+  function zipDateTime(date) {
+    return {
+      time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
+      date: ((Math.max(1980, date.getFullYear()) - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate()
+    };
+  }
+  function makeZip(files) {
+    var encoder = new TextEncoder();
+    var localParts = [];
+    var centralParts = [];
+    var offset = 0;
+    var stamp = zipDateTime(new Date());
+    files.forEach(function (file) {
+      var name = encoder.encode(file.name);
+      var crc = crc32(file.data);
+      var local = new Uint8Array(30 + name.length);
+      var lv = new DataView(local.buffer);
+      put32(lv, 0, 0x04034b50); put16(lv, 4, 20); put16(lv, 6, 0x0800); put16(lv, 8, 0);
+      put16(lv, 10, stamp.time); put16(lv, 12, stamp.date); put32(lv, 14, crc);
+      put32(lv, 18, file.data.length); put32(lv, 22, file.data.length); put16(lv, 26, name.length); put16(lv, 28, 0);
+      local.set(name, 30);
+      localParts.push(local, file.data);
+      var central = new Uint8Array(46 + name.length);
+      var cv = new DataView(central.buffer);
+      put32(cv, 0, 0x02014b50); put16(cv, 4, 20); put16(cv, 6, 20); put16(cv, 8, 0x0800); put16(cv, 10, 0);
+      put16(cv, 12, stamp.time); put16(cv, 14, stamp.date); put32(cv, 16, crc);
+      put32(cv, 20, file.data.length); put32(cv, 24, file.data.length); put16(cv, 28, name.length);
+      put16(cv, 30, 0); put16(cv, 32, 0); put16(cv, 34, 0); put16(cv, 36, 0); put32(cv, 38, 0); put32(cv, 42, offset);
+      central.set(name, 46);
+      centralParts.push(central);
+      offset += local.length + file.data.length;
+    });
+    var centralSize = centralParts.reduce(function (sum, part) { return sum + part.length; }, 0);
+    var end = new Uint8Array(22);
+    var ev = new DataView(end.buffer);
+    put32(ev, 0, 0x06054b50); put16(ev, 4, 0); put16(ev, 6, 0);
+    put16(ev, 8, files.length); put16(ev, 10, files.length); put32(ev, 12, centralSize); put32(ev, 16, offset); put16(ev, 20, 0);
+    return new Blob(localParts.concat(centralParts).concat([end]), { type: 'application/zip' });
+  }
+
+  function triggerDownload(blob, name) {
+    var link = document.createElement('a');
+    var objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 5000);
+  }
+
+  function deliverBlob(blob, name) {
+    if (!directoryHandle) {
+      triggerDownload(blob, name);
+      return Promise.resolve();
+    }
+    return directoryHandle.getFileHandle(name, { create: true }).then(function (fileHandle) {
+      return fileHandle.createWritable();
+    }).then(function (writable) {
+      return writable.write(blob).then(function () { return writable.close(); });
+    });
+  }
+
+  function finishExport(message) {
+    processing.classList.remove('active');
+    downloadBtn.disabled = false;
+    setStatus(message);
+  }
+
+  function failExport(message) {
+    processing.classList.remove('active');
+    downloadBtn.disabled = false;
+    setStatus(message, true);
+  }
+
+  function exportPhotos() {
+    if (!photos.length) return;
+    downloadBtn.disabled = true;
+    processing.classList.add('active');
+    var wantsZip = packaging.value === 'zip';
+    var shouldPreserveMetadata = metadataPolicy.value === 'preserve';
+    var metadataCopied = 0;
+    var files = [];
+    var index = 0;
+    var destination = directoryHandle ? directoryHandle.name : 'Browser Downloads';
+
+    function metadataResultText() {
+      if (!shouldPreserveMetadata) return ' · metadata removed';
+      if (metadataCopied) return ' · embedded metadata preserved for ' + metadataCopied + (metadataCopied === 1 ? ' photo' : ' photos');
+      return ' · no supported embedded metadata was found';
+    }
+
+    function finishSeparate() {
+      finishExport('Saved ' + photos.length + (photos.length === 1 ? ' photo' : ' photos') + ' to ' + destination + ' · original file names kept' + metadataResultText());
+    }
+
+    function finishZip() {
+      processingText.textContent = 'Packing ZIP…';
+      var zipBlob;
+      try {
+        zipBlob = makeZip(files);
+      } catch (error) {
+        failExport('The ZIP could not be created on this device. Try separate files, a smaller batch, or 2K.');
+        return;
+      }
+      deliverBlob(zipBlob, 'enhanced-photos.zip').then(function () {
+        finishExport('Saved one ZIP with ' + files.length + (files.length === 1 ? ' photo' : ' photos') + ' to ' + destination + ' · image file names kept' + metadataResultText());
+      }).catch(function () {
+        failExport('The ZIP could not be written to the selected folder. Choose the folder again or use Browser Downloads.');
+      });
+    }
+
+    function next() {
+      if (index >= photos.length) {
+        if (wantsZip) finishZip();
+        else finishSeparate();
+        return;
+      }
+      processingText.textContent = 'Enhancing ' + (index + 1) + ' of ' + photos.length + '…';
+      setStatus('Enhancing ' + (index + 1) + ' of ' + photos.length + (photos.length === 1 ? ' photo…' : ' photos…'));
+      var fileIndex = index;
+      var photoSettings = settingsForPhoto(photos[fileIndex]);
+      buildEnhancedBlob(photos[fileIndex], photoSettings, shouldPreserveMetadata, function (error, blob, dims, preserved) {
+        if (error || !blob) {
+          failExport('Photo ' + (fileIndex + 1) + ' could not be processed. Try 2K or a smaller batch.');
+          return;
+        }
+        if (preserved) metadataCopied++;
+        if (wantsZip) {
+          blob.arrayBuffer().then(function (buffer) {
+            files.push({ name: photos[fileIndex].file.name, data: new Uint8Array(buffer) });
+            index++;
+            next();
+          }).catch(function () {
+            failExport('The enhanced photos could not be packed on this device.');
+          });
+        } else {
+          deliverBlob(blob, photos[fileIndex].file.name).then(function () {
+            index++;
+            next();
+          }).catch(function () {
+            failExport('Photo ' + (fileIndex + 1) + ' could not be written to the selected folder. Choose the folder again or use Browser Downloads.');
+          });
+        }
+      });
+    }
+
+    next();
+  }
+  downloadBtn.addEventListener('click', exportPhotos);
+})();
+</script>
+</body>
+</html>
